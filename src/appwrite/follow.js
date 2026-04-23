@@ -1,4 +1,5 @@
 import { Client, Databases, ID, Query } from "appwrite";
+import { Permission, Role } from "appwrite";
 
 class FollowService {
   client = new Client();
@@ -20,25 +21,26 @@ class FollowService {
     return import.meta.env.VITE_APPWRITE_FOLLOWS_ID || "follows";
   }
 
-  async followUser(followerId, followingId) {
-    try {
-      return await this.databases.createDocument(
-        this.databaseId,
-        this.followsCollectionId,
-        ID.unique(),
-        {
-          followerId,
-          followingId,
-        },
-      );
-    } catch (error) {
-      if (error?.code === 409) {
-        return null;
-      }
 
-      throw error;
-    }
-  }
+
+async followUser(followerId, followingId) {
+  const existing = await this.isFollowing(followerId, followingId);
+  if (existing) return null;
+
+  return await this.databases.createDocument(
+    this.databaseId,
+    this.followsCollectionId,
+    ID.unique(),
+    {
+      followerId,
+      followingId,
+    },
+    [
+      Permission.read(Role.user(followerId)),
+      Permission.delete(Role.user(followerId)),
+    ]
+  );
+}
 
   async unfollowUser(followerId, followingId) {
     const response = await this.databases.listDocuments(
@@ -101,7 +103,10 @@ class FollowService {
     const response = await this.databases.listDocuments(
       this.databaseId,
       this.followsCollectionId,
-      [Query.equal("followerId", userId)],
+      [
+        Query.equal("followerId", userId),
+        Query.limit(1000),
+      ],
     );
 
     return (response?.documents || []).map((doc) => doc.followingId);
@@ -111,7 +116,10 @@ class FollowService {
     const response = await this.databases.listDocuments(
       this.databaseId,
       this.followsCollectionId,
-      [Query.equal("followingId", userId)],
+      [
+        Query.equal("followingId", userId),
+        Query.limit(1000),
+      ],
     );
 
     return (response?.documents || []).map((doc) => doc.followerId);

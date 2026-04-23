@@ -13,7 +13,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
-import Reels from "./pages/Reels";
+import Feed from "./pages/Reels";
 import Search from "./pages/Search";
 import Signup from "./pages/Signup";
 import SinglePost from "./pages/SinglePost";
@@ -66,9 +66,26 @@ function App() {
         >
           <Route index element={<Home />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/reels" element={<Reels />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/post/:slug" element={<SinglePost />} />
+
+          <Route
+            path="/feed"
+            element={
+              <ProtectedRoute>
+                <Feed />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/reels"
+            element={
+              <ProtectedRoute>
+                <Feed />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/favorites"

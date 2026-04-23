@@ -22,7 +22,7 @@ export default function CreatePost() {
   useEffect(() => {
     if (!image) {
       setImagePreview("");
-      return undefined;
+      return;
     }
 
     const objectUrl = URL.createObjectURL(image);
@@ -34,7 +34,7 @@ export default function CreatePost() {
   useEffect(() => {
     if (!audio) {
       setAudioPreview("");
-      return undefined;
+      return;
     }
 
     const objectUrl = URL.createObjectURL(audio);
@@ -44,56 +44,60 @@ export default function CreatePost() {
   }, [audio]);
 
   async function handleSubmit(event) {
-    event.preventDefault();
-    setError("");
+  event.preventDefault();
+  setError("");
 
-    if (!user) {
-      setError("Please log in before creating a post.");
-      return;
-    }
-
-    if (!image && !audio) {
-      setError("Add an image or audio file before publishing.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      let imageId = null;
-      let audioId = null;
-
-      if (image) {
-        const uploadedImage = await postService.uploadImage(image, user.$id);
-        imageId = uploadedImage?.$id || null;
-      }
-
-      if (audio) {
-        const uploadedAudio = await postService.uploadAudio(audio, user.$id);
-        audioId = uploadedAudio?.$id || null;
-      }
-
-      const resolvedTitle =
-        title.trim() || content.trim().split(/\s+/).slice(0, 6).join(" ") || "new-post";
-
-      await postService.createPost({
-        title: resolvedTitle,
-        content,
-        slug: createSlug(resolvedTitle) || `post-${Date.now()}`,
-        userId: user.$id,
-        userName: user.name,
-        imageId,
-        audioId,
-      });
-
-      navigate("/");
-    } catch (uploadError) {
-      setError(uploadError?.message || "Post creation failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  if (!user) {
+    setError("Please log in before creating a post.");
+    return;
   }
 
+  // ✅ allow at least one media
+  if (!content.trim()) {
+    setError("Please add a caption before publishing.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    let imageId = null;
+    let audioId = null;
+
+    // 📸 upload image only if exists
+    if (image) {
+      const uploadedImage = await postService.uploadImage(image, user.$id);
+      imageId = uploadedImage?.$id ?? null;
+    }
+
+    // 🎵 upload audio only if exists
+    if (audio) {
+      const uploadedAudio = await postService.uploadAudio(audio, user.$id);
+      audioId = uploadedAudio?.$id ?? null;
+    }
+
+    const resolvedTitle =
+      title.trim() ||
+      content.trim().split(/\s+/).slice(0, 6).join(" ") ||
+      "new-post";
+
+    await postService.createPost({
+      title: resolvedTitle,
+      content,
+      slug: createSlug(resolvedTitle) || `post-${Date.now()}`,
+      userId: user.$id,
+      userName: user.name,
+      imageId,
+      audioId,
+    });
+
+    navigate("/");
+  } catch (err) {
+    setError(err?.message || "Post creation failed. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+}
   return (
     <div className="flex min-h-[calc(100vh-7rem)] items-center justify-center py-4">
       <UploadModal
@@ -160,6 +164,7 @@ export default function CreatePost() {
             </label>
 
             <div className="grid gap-3 sm:grid-cols-2">
+              
               <label className="cursor-pointer rounded-[24px] border border-white/10 bg-black/35 p-4 transition hover:border-white/20 hover:bg-white/5">
                 <div className="flex items-center gap-3">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/8 text-zinc-200">
@@ -172,12 +177,14 @@ export default function CreatePost() {
                     </p>
                   </div>
                 </div>
+
                 <input
                   type="file"
                   accept="image/*"
                   className="hidden"
                   onChange={(event) => setImage(event.target.files?.[0] || null)}
                 />
+
               </label>
 
               <label className="cursor-pointer rounded-[24px] border border-white/10 bg-black/35 p-4 text-zinc-100 transition hover:border-white/20 hover:bg-white/5">

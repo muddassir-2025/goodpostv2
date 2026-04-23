@@ -10,7 +10,7 @@ import {
 const items = [
   { to: "/", label: "Home", icon: HomeIcon },
   { to: "/search", label: "Search", icon: SearchIcon },
-  { to: "/reels", label: "Reels", icon: ReelsIcon },
+  { to: "/feed", label: "Feed", icon: ReelsIcon },
   { to: "/favorites", label: "Favorites", icon: HeartIcon },
   { to: "/profile", label: "Profile", icon: UserIcon },
 ];
