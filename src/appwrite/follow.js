@@ -1,114 +1,122 @@
-import { databases } from "./config"; // your Appwrite config
-import { Query } from "appwrite";
+import { Client, Databases, ID, Query } from "appwrite";
 
-const VITE_APPWRITE_DATABASE_ID="69d832fc0035a264b35b"
-const VITE_APPWRITE_FOLLOWS_ID="follows"
+class FollowService {
+  client = new Client();
+  databases;
 
-const followService = {
-  // ✅ Follow user
+  constructor() {
+    this.client
+      .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT)
+      .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID);
+
+    this.databases = new Databases(this.client);
+  }
+
+  get databaseId() {
+    return import.meta.env.VITE_APPWRITE_DATABASE_ID;
+  }
+
+  get followsCollectionId() {
+    return import.meta.env.VITE_APPWRITE_FOLLOWS_ID || "follows";
+  }
+
   async followUser(followerId, followingId) {
     try {
-      return await databases.createDocument(
-        VITE_APPWRITE_DATABASE_ID,
-        VITE_APPWRITE_FOLLOWS_ID,
-        "unique()", // auto id
+      return await this.databases.createDocument(
+        this.databaseId,
+        this.followsCollectionId,
+        ID.unique(),
         {
           followerId,
           followingId,
-        }
+        },
       );
-    } catch (err) {
-      // prevent duplicate follow crash
-      if (err.code === 409) return null;
-      throw err;
-    }
-  },
+    } catch (error) {
+      if (error?.code === 409) {
+        return null;
+      }
 
-  // ✅ Unfollow user
+      throw error;
+    }
+  }
+
   async unfollowUser(followerId, followingId) {
-    try {
-      const res = await databases.listDocuments(
-        VITE_APPWRITE_DATABASE_ID,
-        VITE_APPWRITE_FOLLOWS_ID,
-        [
-          Query.equal("followerId", followerId),
-          Query.equal("followingId", followingId),
-        ]
-      );
+    const response = await this.databases.listDocuments(
+      this.databaseId,
+      this.followsCollectionId,
+      [
+        Query.equal("followerId", followerId),
+        Query.equal("followingId", followingId),
+      ],
+    );
 
-      if (res.documents.length === 0) return;
+    const docId = response?.documents?.[0]?.$id;
 
-      const docId = res.documents[0].$id;
-
-      return await databases.deleteDocument(
-        VITE_APPWRITE_DATABASE_ID,
-        VITE_APPWRITE_FOLLOWS_ID,
-        docId
-      );
-    } catch (err) {
-      throw err;
+    if (!docId) {
+      return null;
     }
-  },
 
-  // ✅ Check if following
+    return this.databases.deleteDocument(
+      this.databaseId,
+      this.followsCollectionId,
+      docId,
+    );
+  }
+
   async isFollowing(followerId, followingId) {
-    const res = await databases.listDocuments(
-     VITE_APPWRITE_DATABASE_ID,
-     VITE_APPWRITE_FOLLOWS_ID,
+    const response = await this.databases.listDocuments(
+      this.databaseId,
+      this.followsCollectionId,
       [
         Query.equal("followerId", followerId),
         Query.equal("followingId", followingId),
         Query.limit(1),
-      ]
+      ],
     );
 
-    return res.documents.length > 0;
-  },
+    return (response?.documents?.length || 0) > 0;
+  }
 
-  // ✅ Get followers count
   async getFollowersCount(userId) {
-    const res = await databases.listDocuments(
-     VITE_APPWRITE_DATABASE_ID,
-      VITE_APPWRITE_FOLLOWS_ID,
-      [Query.equal("followingId", userId)]
+    const response = await this.databases.listDocuments(
+      this.databaseId,
+      this.followsCollectionId,
+      [Query.equal("followingId", userId)],
     );
 
-    return res.total;
-  },
+    return response?.total || 0;
+  }
 
-  // ✅ Get following count
   async getFollowingCount(userId) {
-    const res = await databases.listDocuments(
-      VITE_APPWRITE_DATABASE_ID,
-      VITE_APPWRITE_FOLLOWS_ID,
-      [Query.equal("followerId", userId)]
+    const response = await this.databases.listDocuments(
+      this.databaseId,
+      this.followsCollectionId,
+      [Query.equal("followerId", userId)],
     );
 
-    return res.total;
-  },
+    return response?.total || 0;
+  }
 
-  // ✅ Get all users I follow
   async getFollowing(userId) {
-    const res = await databases.listDocuments(
-      VITE_APPWRITE_DATABASE_ID,
-      VITE_APPWRITE_FOLLOWS_ID,
-      [Query.equal("followerId", userId)]
+    const response = await this.databases.listDocuments(
+      this.databaseId,
+      this.followsCollectionId,
+      [Query.equal("followerId", userId)],
     );
 
-    return res.documents.map((doc) => doc.followingId);
-  },
+    return (response?.documents || []).map((doc) => doc.followingId);
+  }
 
-  // ✅ Get followers list (optional)
   async getFollowers(userId) {
-    const res = await databases.listDocuments(
-      VITE_APPWRITE_DATABASE_ID,
-      VITE_APPWRITE_FOLLOWS_ID,
-      [Query.equal("followingId", userId)]
+    const response = await this.databases.listDocuments(
+      this.databaseId,
+      this.followsCollectionId,
+      [Query.equal("followingId", userId)],
     );
 
-    return res.documents.map((doc) => doc.followerId);
-  },
-};
+    return (response?.documents || []).map((doc) => doc.followerId);
+  }
+}
 
+const followService = new FollowService();
 export default followService;
-

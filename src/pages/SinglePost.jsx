@@ -35,7 +35,6 @@ export default function SinglePost() {
   const [editText, setEditText] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -296,7 +295,7 @@ export default function SinglePost() {
                 <ArrowLeftIcon className="h-5 w-5" />
               </button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 cursor-pointer " onClick={() => navigate(`/profile/${post.authorID}`)}>
                 <Avatar name={post.authorName} size="md" ring />
                 <div>
                   <p className="font-semibold text-white">{getHandle(post.authorName)}</p>
@@ -306,7 +305,7 @@ export default function SinglePost() {
             </div>
 
             {isOwner ? (
-              <div className="flex gap-1">
+              <div className="flex gap-1 cursor-pointer">
                 <button
                   type="button"
                   onClick={() => navigate(`/edit/${post.$id}`)}

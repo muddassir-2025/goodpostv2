@@ -40,8 +40,8 @@ export default function Navbar() {
   />
 </div>
           <div>
-            <p className="font-display text-lg tracking-wide text-white">GoodPost</p>
-            <p className="hidden text-xs text-zinc-500 sm:block">Photo and audio journaling</p>
+            <p className="font-display text-lg font-amatic tracking-wide text-white">GoodPost</p>
+            <p className="hidden text-xs text-zinc-500 sm:block">Clear View</p>
           </div>
         </Link>
 
