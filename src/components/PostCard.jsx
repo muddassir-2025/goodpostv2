@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Avatar from "./Avatar";
 import FavoriteButton from "./FavoriteButton";
+
+import { confirm } from "../confirmService";
+
 import LikeButton from "./LikeButton";
 import {
   CommentIcon,
@@ -103,8 +106,10 @@ export default function PostCard({
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setMenuOpen(false);
+                       const ok = await confirm("Delete this post?");
+                       if (!ok) return;
                       onDelete(post);
                     }}
                     className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-rose-300 transition hover:bg-rose-500/10"

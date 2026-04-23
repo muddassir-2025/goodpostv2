@@ -131,10 +131,7 @@ export default function Home() {
   }
 
   async function handleDelete(post) {
-    if (!window.confirm("Delete this post?")) {
-      return;
-    }
-
+   
     try {
       if (post.featuredImg) {
         await postService.deleteFile(post.featuredImg);
@@ -166,7 +163,7 @@ export default function Home() {
 
           <Link
             to={user ? "/create" : "/login"}
-            className="hidden rounded-full bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200 sm:inline-flex"
+            className="hidden rounded-full bg-grey-400 px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-700 sm:inline-flex"
           >
             Share
           </Link>
