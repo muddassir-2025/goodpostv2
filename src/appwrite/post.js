@@ -16,35 +16,47 @@ class PostService {
   }
 
   // ✅ Create Post
-  async createPost({ title, content, slug, userId, imageId, userName,audioId, isSystem = false  }) {
-    try {
-      return await this.databases.createDocument(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_TABLE_ID,
-        ID.unique(),
-        {
-          title,
-          content,
-          slug,
-          authorID: userId,
-          featuredImg: imageId,
+  async createPost({
+  title,
+  content,
+  slug,
+  userId,
+  imageId,
+  userName,
+  audioId,
+  tags = [], // ✅ correct way
+  isSystem = false,
+}) {
+  try {
+    return await this.databases.createDocument(
+      import.meta.env.VITE_APPWRITE_DATABASE_ID,
+      import.meta.env.VITE_APPWRITE_TABLE_ID,
+      ID.unique(),
+      {
+        title,
+        content,
+        slug,
+        authorID: userId,
+        authorName: userName,
 
-          audioId: audioId,
+        featuredImg: imageId,
+        audioId: audioId,
 
-          isPublished: true,
-          authorName: userName,
+        tags: tags, // ✅ IMPORTANT FIX
 
-          likeCount: 0,
-          commentCount: 0,
+        isPublished: true,
 
-          isSystem
-        }
-      );
-    } catch (error) {
-      console.log("create post error ", error);
-      throw error;
-    }
+        likeCount: 0,
+        commentCount: 0,
+
+        isSystem,
+      }
+    );
+  } catch (error) {
+    console.log("create post error ", error);
+    throw error;
   }
+}
 
   // ✅ Get All Posts
   async getPosts() {

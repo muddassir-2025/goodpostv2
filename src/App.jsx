@@ -17,7 +17,7 @@ import Feed from "./pages/Reels";
 import Search from "./pages/Search";
 import Signup from "./pages/Signup";
 import SinglePost from "./pages/SinglePost";
-
+import TagFeed from "./pages/TagFeed";
 import ConfirmPopup from "./components/ConfirmPopup";
 
 function App() {
@@ -104,6 +104,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route path="/tag/:tag" element={<TagFeed />} />
 
           <Route
   path="/profile/:id"
