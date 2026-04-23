@@ -6,7 +6,7 @@ import PostCard from "../components/PostCard";
 import PostSkeleton from "../components/PostSkeleton";
 import EmptyState from "../components/EmptyState";
 
-import { fetchFeedPosts } from "../lib/posts";
+import { fetchFeedPosts, sortPosts } from "../lib/posts";
 import { syncFavorite, syncLike } from "../lib/engagement";
 import postService from "../appwrite/post";
 
@@ -17,6 +17,7 @@ export default function TagFeed() {
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("latest");
 
   useEffect(() => {
     let active = true;
@@ -142,6 +143,8 @@ export default function TagFeed() {
     }
   };
 
+  const visiblePosts = sortPosts(posts, filter);
+
   return (
     <div className="space-y-4">
 
@@ -156,14 +159,35 @@ export default function TagFeed() {
         <p className="text-sm text-zinc-400 mt-2">
           Posts under {tag}
         </p>
+        
+        {/* FILTER BAR */}
+        <div className="mt-4 flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {[
+            { id: "latest", label: "Latest" },
+            { id: "likes", label: "Popular" },
+            { id: "comments", label: "Discussed" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setFilter(item.id)}
+              className={`rounded-full px-4 py-2 text-sm transition ${
+                filter === item.id
+                  ? "bg-white text-black"
+                  : "border border-white/10 bg-white/5 text-zinc-400 hover:text-white"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </section>
 
       {/* CONTENT */}
       {loading ? (
         <PostSkeleton count={3} />
-      ) : posts.length ? (
+      ) : visiblePosts.length ? (
         <div className="space-y-4">
-          {posts.map((post) => (
+          {visiblePosts.map((post) => (
             <PostCard
               key={post.$id}
               post={post}

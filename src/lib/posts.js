@@ -93,7 +93,7 @@ export async function enrichPostsForUser(posts = [], user) {
   );
 }
 
-export async function fetchFeedPosts(user) {
-  const response = await postService.getPosts();
+export async function fetchFeedPosts(user, queries = []) {
+  const response = await postService.getPosts(queries);
   return enrichPostsForUser(response?.documents || [], user);
 }

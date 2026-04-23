@@ -59,11 +59,12 @@ class PostService {
 }
 
   // ✅ Get All Posts
-  async getPosts() {
+  async getPosts(queries = []) {
     try {
       return await this.databases.listDocuments(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_TABLE_ID
+        import.meta.env.VITE_APPWRITE_TABLE_ID,
+        queries
       );
     } catch (error) {
       console.log("get posts error ", error);

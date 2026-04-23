@@ -5,13 +5,14 @@ import {
   ReelsIcon,
   SearchIcon,
   UserIcon,
+  BellIcon,
 } from "./ui/Icons";
 
 const items = [
   { to: "/", label: "Home", icon: HomeIcon },
   { to: "/search", label: "Search", icon: SearchIcon },
-  { to: "/feed", label: "Feed", icon: ReelsIcon },
-  { to: "/favorites", label: "Favorites", icon: HeartIcon },
+  { to: "/feed", label: "Following", icon: ReelsIcon },
+  { to: "/favorites", label: "Saved", icon: HeartIcon },
   { to: "/profile", label: "Profile", icon: UserIcon },
 ];
 

@@ -2,7 +2,7 @@ import { useSelector } from "react-redux";
 import { Link, NavLink } from "react-router-dom";
 import Avatar from "./Avatar";
 import LogoutBtn from "./LogoutBtn";
-import { HeartIcon, MessageIcon, PlusSquareIcon } from "./ui/Icons";
+import { HeartIcon, MessageIcon, PlusSquareIcon, BellIcon } from "./ui/Icons";
 import { getHandle } from "../lib/ui";
 
 function ActionLink({ to, label, icon }) {
@@ -49,6 +49,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2 sm:gap-3">
             <ActionLink to="/create" label="Create post" icon={PlusSquareIcon} />
             <ActionLink to="/favorites" label="Favorites" icon={HeartIcon} />
+            <ActionLink to="/notifications" label="Notifications" icon={BellIcon} />
             <ActionLink to="/messages" label="Messages" icon={MessageIcon} />
 
             <Link

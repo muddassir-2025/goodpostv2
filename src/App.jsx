@@ -20,6 +20,8 @@ import SinglePost from "./pages/SinglePost";
 import TagFeed from "./pages/TagFeed";
 import ConfirmPopup from "./components/ConfirmPopup";
 
+import Notifications from "./pages/Notifications";
+
 function App() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
@@ -68,6 +70,14 @@ function App() {
           <Route path="/search" element={<Search />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/post/:slug" element={<SinglePost />} />
+          <Route 
+            path="/notifications" 
+            element={
+              <ProtectedRoute>
+                <Notifications />
+              </ProtectedRoute>
+            } 
+          />
 
           <Route
             path="/feed"

@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import EmptyState from "../components/EmptyState";
@@ -13,9 +13,9 @@ import { fetchFeedPosts, filterPosts, sortPosts } from "../lib/posts";
 import { buildStories } from "../lib/ui";
 
 const filters = [
-  { id: "latest", label: "Latest" },
+  { id: "latest", label: "For You" },
+  { id: "following", label: "Following" },
   { id: "likes", label: "Popular" },
-  { id: "comments", label: "Discussed" },
 ];
 
 export default function Home() {
@@ -23,72 +23,94 @@ export default function Home() {
   const navigate = useNavigate();
 
   const [posts, setPosts] = useState([]);
-  const [stories, setStories] = useState([]); // ✅ NEW
+  const [stories, setStories] = useState([]); 
+  const [allowedUsers, setAllowedUsers] = useState(new Set()); // ✅ NEW
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("latest");
 
+  // ✅ INFINITE SCROLL STATE
+  const [visibleCount, setVisibleCount] = useState(5);
+  const loaderRef = useRef(null);
+
   const deferredSearch = useDeferredValue(search);
 
   useEffect(() => {
-  let active = true;
+    let active = true;
 
-  async function loadFeed() {
-    setLoading(true);
-    setError("");
+    async function loadFeed() {
+      setLoading(true);
+      setError("");
 
-    try {
-      // ✅ 1. fetch all posts
-      const data = await fetchFeedPosts(user);
+      try {
+        const data = await fetchFeedPosts(user);
 
-      // ✅ 2. get following users
-      const followingIds = user
-        ? await followService.getFollowing(user.$id)
-        : [];
+        const followingIds = user
+          ? await followService.getFollowing(user.$id)
+          : [];
 
-      // ✅ 3. include yourself
-      const allowedUsers = user
-        ? new Set([user.$id, ...followingIds])
-        : new Set();
+        const allowed = user
+          ? new Set([user.$id, ...followingIds])
+          : new Set();
 
-      // ✅ 4. filter posts for stories (FIXED 🔥)
-      const storyPosts = data.filter((post) =>
-        allowedUsers.has(post.authorID)
-      );
+        const storyPosts = data.filter((post) =>
+          allowed.has(post.authorID)
+        );
 
-      // ✅ 5. build stories
-      let builtStories = buildStories(storyPosts, user);
+        let builtStories = buildStories(storyPosts, user);
 
-      // ✅ 6. optional: your story first
-      builtStories = builtStories.sort(
-        (a, b) => Number(b.isOwn) - Number(a.isOwn)
-      );
+        builtStories = builtStories.sort(
+          (a, b) => Number(b.isOwn) - Number(a.isOwn)
+        );
 
-      if (active) {
-        setPosts(data);          // full feed
-        setStories(builtStories); // stories only from following
-      }
-    } catch (err) {
-      console.error(err);
-      if (active) {
-        setError("Could not load the feed right now.");
-      }
-    } finally {
-      if (active) {
-        setLoading(false);
+        if (active) {
+          setPosts(data);          
+          setStories(builtStories); 
+          setAllowedUsers(allowed); // ✅ NEW
+        }
+      } catch (err) {
+        console.error(err);
+        if (active) {
+          setError("Could not load the feed right now.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     }
-  }
 
-  loadFeed();
+    loadFeed();
 
-  return () => {
-    active = false;
-  };
-}, [user]);
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
-  const visiblePosts = sortPosts(filterPosts(posts, deferredSearch), filter);
+  const searchFiltered = filterPosts(posts, deferredSearch);
+  const feedFiltered = filter === "following" 
+    ? searchFiltered.filter((p) => allowedUsers.has(p.authorID))
+    : searchFiltered;
+  const visiblePosts = sortPosts(feedFiltered, filter === "following" ? "latest" : filter);
+
+  // ✅ INFINITE SCROLL OBSERVER
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((prev) => prev + 5);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loaderRef.current) {
+      observer.observe(loaderRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [visiblePosts]);
 
   function updatePost(postId, updater) {
     setPosts((current) =>
@@ -263,7 +285,7 @@ export default function Home() {
         <PostSkeleton count={3} />
       ) : visiblePosts.length ? (
         <div className="space-y-4">
-          {visiblePosts.map((post) => (
+          {visiblePosts.slice(0, visibleCount).map((post) => (
             <PostCard
               key={post.$id}
               post={post}
@@ -274,6 +296,19 @@ export default function Home() {
               onEdit={(id) => navigate(`/edit/${id}`)}
             />
           ))}
+
+          {/* INFINITE SCROLL LOADER */}
+          {visibleCount < visiblePosts.length && (
+            <div ref={loaderRef} className="py-6 flex justify-center">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-500 border-t-white"></div>
+            </div>
+          )}
+
+          {visibleCount >= visiblePosts.length && visiblePosts.length > 5 && (
+            <p className="py-8 text-center text-xs text-zinc-500">
+              You've caught up with everything!
+            </p>
+          )}
         </div>
       ) : (
         <EmptyState

@@ -27,7 +27,7 @@ async followUser(followerId, followingId) {
   const existing = await this.isFollowing(followerId, followingId);
   if (existing) return null;
 
-  return await this.databases.createDocument(
+  const res = await this.databases.createDocument(
     this.databaseId,
     this.followsCollectionId,
     ID.unique(),
@@ -40,6 +40,17 @@ async followUser(followerId, followingId) {
       Permission.delete(Role.user(followerId)),
     ]
   );
+
+  // ✅ NOTIFY TARGET USER
+  import("./notification").then(({ default: notificationService }) => {
+    notificationService.createNotification({
+      userId: followingId,
+      actorId: followerId,
+      type: "follow",
+    });
+  });
+
+  return res;
 }
 
   async unfollowUser(followerId, followingId) {

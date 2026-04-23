@@ -2,7 +2,7 @@ import { Client, ID, Databases, Query, Permission, Role } from "appwrite";
 import postService from "./post";
 
 class CommentService {
-  client = new Client(); // ✅ FIX
+  client = new Client();
   databases;
 
   constructor() {
@@ -18,7 +18,7 @@ class CommentService {
     try {
       const res = await this.databases.createDocument(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_COMMENTS_ID, // ✅ FIX
+        import.meta.env.VITE_APPWRITE_COMMENTS_ID,
         ID.unique(),
         {
           postId,    
@@ -27,20 +27,34 @@ class CommentService {
           content,
         },
         [
-        Permission.read(Role.any()),
-        Permission.update(Role.user(userId)),   // 👈 only owner
-        Permission.delete(Role.user(userId))    // 👈 only owner
-    ]
+          Permission.read(Role.any()),
+          Permission.update(Role.user(userId)),
+          Permission.delete(Role.user(userId))
+        ]
       );
 
-       // ✅ UPDATE POST COMMENT COUNT
-        const post = await postService.getPostById(postId);
+      // ✅ UPDATE POST COMMENT COUNT
+      const post = await postService.getPostById(postId);
 
+      if (post) {
         await postService.updatePost(postId, {
             commentCount: (post.commentCount || 0) + 1
         });
 
-        return res;
+        // ✅ NOTIFY POST AUTHOR
+        if (post.authorID && post.authorID !== userId) {
+            import("./notification").then(({ default: notificationService }) => {
+                notificationService.createNotification({
+                    userId: post.authorID,
+                    actorId: userId,
+                    type: "comment",
+                    postId: postId,
+                });
+            });
+        }
+      }
+
+      return res;
 
     } catch (error) {
       console.log("create comment error ", error);
@@ -56,12 +70,13 @@ class CommentService {
         [Query.equal("postId", postId)]
       );
 
-      return res.documents; // ✅ return only documents
+      return res.documents;
     } catch (error) {
       console.log("get comments error ", error);
     }
   }
-  //update comment 
+
+  // update comment 
   async updateComment(commentId, data) {
     try {
       return await this.databases.updateDocument(
@@ -75,8 +90,8 @@ class CommentService {
     }
   }
 
-  //delete comment
-   async deleteComment(commentId, postId) {
+  // delete comment
+  async deleteComment(commentId, postId) {
     try {
       const res = await this.databases.deleteDocument(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
@@ -98,10 +113,7 @@ class CommentService {
       console.log("delete comment error: ", error);
     }
   }
-
-
 }
 
-// ✅ export
 const commentService = new CommentService();
 export default commentService;

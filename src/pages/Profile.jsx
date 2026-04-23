@@ -124,6 +124,8 @@ export default function Profile() {
     return () => (active = false);
   }, [id, currentUser, isOwnProfile]);
 
+  const [filter, setFilter] = useState("all");
+
   // 🔥 NOT LOGGED IN
   if (!currentUser) {
     return (
@@ -149,6 +151,13 @@ export default function Profile() {
 
   const followers = followersCount;
   const following = followingCount;
+
+  // 🔥 FILTER POSTS
+  const visiblePosts = posts.filter((post) => {
+    if (filter === "images") return !!post.featuredImg;
+    if (filter === "audio") return !!post.audioId;
+    return true;
+  });
 
   return (
     <div className="space-y-5">
@@ -233,18 +242,37 @@ export default function Profile() {
 
       {/* POSTS GRID */}
       <section className="rounded-[32px] border border-white/10 bg-[#121212]/92 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.34)]">
-        <div className="mb-4 flex justify-between">
-          <h2 className="text-2xl text-white">
-            {isOwnProfile ? "Your grid" : `${profileName}'s posts`}
-          </h2>
-          <p className="text-sm text-zinc-500">{posts.length} uploads</p>
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl text-white">
+              {isOwnProfile ? "Your grid" : `${profileName}'s posts`}
+            </h2>
+            <p className="text-sm text-zinc-500">{visiblePosts.length} uploads</p>
+          </div>
+
+          {/* FILTER TABS */}
+          <div className="flex gap-1 rounded-full border border-white/10 bg-black/40 p-1 self-start sm:self-auto">
+            {["all", "images", "audio"].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`rounded-full px-4 py-1.5 text-xs font-medium capitalize transition ${
+                  filter === f
+                    ? "bg-white text-black shadow-md"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
 
         {loading ? (
           <PostSkeleton count={2} />
-        ) : posts.length ? (
+        ) : visiblePosts.length ? (
           <div className="grid grid-cols-3 gap-3">
-            {posts.map((post) => {
+            {visiblePosts.map((post) => {
               const imageSrc = getFileUrl(post.featuredImg);
 
               return (
