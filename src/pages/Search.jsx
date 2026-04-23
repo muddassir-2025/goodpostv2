@@ -185,20 +185,30 @@ export default function Search() {
             )}
 
             {/* CONTENT */}
-            <div className="absolute bottom-0 w-full p-3">
+            <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/95 via-black/60 to-transparent p-3 pt-8">
               <p className="truncate text-sm font-semibold text-white">
                 {post.title}
               </p>
 
-              <div className="mt-1 flex items-center justify-between">
-                <p className="text-xs text-zinc-300">
+              {post.content && (
+                <p className="mt-0.5 truncate text-[11px] text-zinc-300">
+                  {post.content}
+                </p>
+              )}
+
+              <div className="mt-1.5 flex items-center justify-between gap-2">
+                <p className="truncate text-xs text-zinc-400">
                   {getHandle(post.authorName)}
                 </p>
 
                 {post.tags?.length ? (
-                  <span className="rounded-full border border-white/10 bg-white/10 px-2 py-[2px] text-[10px] text-zinc-200">
-                    {post.tags[0]}
-                  </span>
+                  <div className="flex gap-1 overflow-hidden">
+                    {post.tags.slice(0, 2).map((tag) => (
+                      <span key={tag} className="rounded-full border border-white/10 bg-white/10 px-2 py-[2px] text-[9px] uppercase tracking-wider text-zinc-200 whitespace-nowrap">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 ) : null}
               </div>
             </div>

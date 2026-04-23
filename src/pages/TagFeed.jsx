@@ -28,7 +28,7 @@ export default function TagFeed() {
         const data = await fetchFeedPosts(user);
 
         const filtered = data.filter((post) =>
-          post.tags?.includes(tag)
+          post.tags?.some((t) => t.toLowerCase() === tag.toLowerCase())
         );
 
         if (active) {

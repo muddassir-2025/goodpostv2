@@ -196,10 +196,27 @@ export default function PostCard({
         <p className="text-sm font-semibold text-white">
           {formatCompactNumber(post.likeCount || 0)} likes
         </p>
+
+        {post.title && (
+          <p className="text-sm font-bold text-white">
+            {post.title}
+          </p>
+        )}
+
         <p className="text-sm leading-6 text-zinc-300">
           <span className="mr-2 font-semibold text-white">{getHandle(post.authorName)}</span>
           {captionPreview || "Shared a fresh update."}
         </p>
+
+        {post.tags?.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {post.tags.map((tag) => (
+              <span key={tag} className="rounded-full border border-white/10 bg-white/5 px-2 py-[2px] text-[10px] uppercase tracking-wider text-zinc-400">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
         <button
           type="button"
           onClick={openPost}
