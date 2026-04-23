@@ -1,0 +1,18 @@
+{
+  "name": "ml-moderation-service",
+  "version": "1.0.0",
+  "description": "NSFW JS Moderation API using TensorFlow.js",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "*",
+    "cors": "*",
+    "nsfwjs": "*",
+    "@tensorflow/tfjs": "*",
+    "axios": "*",
+    "jimp": "0.22.10"
+  }
+}
