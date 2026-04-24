@@ -116,46 +116,47 @@ export default function Search() {
     navigate(`/post/${post.slug}`);
   };
 
-  const renderPostItem = (post, index = 0, compact = false) => (
+  const renderPostItem = (post, compact = false) => (
     <div
       key={post.$id}
-      className={`group w-full border-b border-white/5 transition hover:bg-white/[0.03] ${compact ? 'p-4' : 'p-5'}`}
+      className={`group w-full transition duration-300 hover:bg-white/[0.04] ${compact ? 'py-3' : 'py-5'}`}
     >
       <div className="flex gap-4 cursor-pointer" onClick={() => handlePostClick(post)}>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1 text-[13px] text-zinc-500 mb-1">
-            <span className="font-bold text-white transition group-hover:text-blue-400">
+          <div className="flex items-center gap-2 text-xs text-zinc-500 mb-1.5">
+            <Avatar name={post.authorName} size="xs" />
+            <span className="font-semibold text-zinc-400 group-hover:text-white transition">
                 {getHandle(post.authorName)}
             </span>
             <span>·</span>
             <span>{formatRelativeTime(post.$createdAt)}</span>
           </div>
           
-          <h3 className={`font-bold text-white leading-snug group-hover:text-zinc-200 transition ${compact ? 'text-[15px]' : 'text-[17px]'}`}>
+          <h3 className={`font-display font-bold text-white leading-tight group-hover:text-blue-400 transition-colors ${compact ? 'text-[16px]' : 'text-[19px]'}`}>
             {post.title}
           </h3>
           
-          {!compact && (
-            <p className="mt-1 line-clamp-2 text-[14px] text-zinc-400 leading-normal">
+          {!compact && post.content && (
+            <p className="mt-2 line-clamp-2 text-[14px] text-zinc-400 leading-relaxed">
               {post.content}
             </p>
           )}
 
-          <div className="mt-3 flex items-center gap-5 text-zinc-500">
-            <span className="flex items-center gap-1.5 text-xs">
-              <CommentIcon className="h-4 w-4" /> {post.commentCount}
+          <div className="mt-4 flex items-center gap-5 text-zinc-500">
+            <span className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">
+              <CommentIcon className="h-3.5 w-3.5" /> {post.commentCount}
             </span>
-            <span className="flex items-center gap-1.5 text-xs">
-              <HeartIcon className="h-4 w-4" /> {post.likeCount}
+            <span className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider uppercase">
+              <HeartIcon className="h-3.5 w-3.5" /> {post.likeCount}
             </span>
           </div>
         </div>
 
         {post.featuredImg && (
-          <div className={`flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 ${compact ? 'h-16 w-16' : 'h-24 w-24'}`}>
+          <div className={`flex-shrink-0 overflow-hidden rounded-[24px] border border-white/10 bg-[#121212] ${compact ? 'h-20 w-20' : 'h-28 w-28'}`}>
             <img 
               src={getFileUrl(post.featuredImg)} 
-              className="h-full w-full object-cover transition duration-500 group-hover:scale-110" 
+              className="h-full w-full object-cover transition duration-700 group-hover:scale-110" 
             />
           </div>
         )}
@@ -164,13 +165,13 @@ export default function Search() {
   );
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-blue-500/30">
-      {/* 🔍 TOP NAV */}
-      <header className="sticky top-16 z-40 bg-black/80 backdrop-blur-md md:top-20">
-        <div className="flex items-center gap-4 px-4 py-3">
+    <div className="min-h-screen space-y-6 pb-24">
+      {/* 🔍 HEADER (Glassmorphic) */}
+      <section className="sticky top-16 z-40 -mx-2 bg-black/60 backdrop-blur-2xl md:top-20 md:mx-0 md:rounded-[32px] md:border md:border-white/10 md:p-1">
+        <div className="flex flex-col gap-1 p-4">
           <div className="relative flex-1" ref={dropdownRef}>
-            <div className="flex items-center gap-3 rounded-full bg-[#202327] px-4 py-2 transition focus-within:bg-black focus-within:ring-1 focus-within:ring-blue-500">
-              <SearchIcon className="h-4 w-4 text-zinc-500" />
+            <div className="flex items-center gap-3 rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 focus-within:border-white/20 focus-within:bg-white/10 transition-all">
+              <SearchIcon className="h-5 w-5 text-zinc-500" />
               <input
                 type="text"
                 value={query}
@@ -178,98 +179,112 @@ export default function Search() {
                   setQuery(e.target.value);
                   if (e.target.value) setIsFullList(true);
                 }}
-                placeholder="Search"
-                className="w-full bg-transparent text-[15px] outline-none"
+                placeholder="Explore the feed..."
+                className="w-full bg-transparent text-[15px] text-white outline-none placeholder:text-zinc-500"
               />
             </div>
           </div>
-        </div>
 
-        {/* 📑 TABS */}
-        <div className="hide-scrollbar flex overflow-x-auto border-b border-white/10">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => handleTabChange(cat.id)}
-              className={`relative min-w-[100px] py-4 text-sm font-bold transition whitespace-nowrap px-4 ${
-                activeCategory === cat.id && !query ? "text-white" : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              {cat.label}
-              {activeCategory === cat.id && !query && (
-                <div className="absolute bottom-0 left-1/2 h-1 w-full -translate-x-1/2 rounded-full bg-blue-500" />
-              )}
-            </button>
-          ))}
+          {/* 📑 TABS */}
+          <div className="hide-scrollbar mt-2 flex gap-1 overflow-x-auto">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleTabChange(cat.id)}
+                className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all whitespace-nowrap ${
+                  activeCategory === cat.id && !query
+                    ? "bg-white text-black shadow-[0_10px_30px_rgba(255,255,255,0.2)]"
+                    : "text-zinc-400 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </header>
+      </section>
 
-      <div className="">
+      <div className="space-y-6">
         {loading ? (
-          <div className="p-10 text-center"><PostSkeleton count={5} /></div>
+          <PostSkeleton count={3} />
         ) : (
           <>
-            {/* 🎯 DISCOVERY VIEW */}
+            {/* 🎯 DISCOVERY VIEW (The Glass Card) */}
             {!isFullList && !debouncedQuery && activeCategory !== "for-you" && activeCategory !== "trending" && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="p-5">
-                   <h2 className="text-xl font-extrabold text-white">Trending in {activeCategory}</h2>
-                </div>
-                
-                {results.length > 0 ? (
-                  <div className="divide-y divide-white/5">
-                    {/* The "Headliner" - First Post is bigger */}
-                    {renderPostItem(results[0], 0, false)}
-                    
-                    {/* The rest are compact list items */}
-                    {results.slice(1, 5).map((post, idx) => renderPostItem(post, idx + 1, true))}
-                    
-                    <button 
-                      onClick={() => setIsFullList(true)}
-                      className="group flex w-full items-center justify-between p-5 text-sm font-medium text-blue-500 hover:bg-white/5 transition"
-                    >
-                      Show more
-                      <span className="opacity-0 transition group-hover:opacity-100 group-hover:translate-x-1">→</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="p-10 text-center">
-                    <EmptyState title={`No posts in ${activeCategory}`} description="Be the first to share!" />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 📈 TRENDING TAB VIEW */}
-            {!isFullList && !debouncedQuery && activeCategory === "trending" && (
-              <div className="divide-y divide-white/10">
-                {trendingTopics.map(topic => (
-                   <button
-                    key={topic.name}
-                    onClick={() => {
-                      setActiveCategory(topic.name);
-                      setIsFullList(true);
-                    }}
-                    className="flex w-full items-start justify-between p-5 text-left transition hover:bg-white/[0.03]"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] text-zinc-500">Trending</p>
-                      <h2 className="mt-1 text-[16px] font-extrabold text-white">#{topic.name}</h2>
-                      <p className="text-[13px] text-zinc-500 mt-1">{topic.count} posts</p>
+              <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[#121212]/90 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl">
+                  <div className="mb-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-500">Discovery</p>
+                        <h2 className="font-display mt-1 text-2xl text-white">Top in {activeCategory}</h2>
                     </div>
-                    <DotsIcon className="h-5 w-5 text-zinc-600" />
-                  </button>
-                ))}
-              </div>
+                    <TrendingIcon className="h-6 w-6 text-zinc-600" />
+                  </div>
+                  
+                  {results.length > 0 ? (
+                    <div className="divide-y divide-white/5">
+                      {/* Featured Highlight */}
+                      {renderPostItem(results[0], false)}
+                      
+                      {/* Compact Threads */}
+                      <div className="mt-2 divide-y divide-white/5">
+                        {results.slice(1, 5).map((post) => renderPostItem(post, true))}
+                      </div>
+                      
+                      <button 
+                        onClick={() => setIsFullList(true)}
+                        className="mt-4 flex w-full items-center justify-center rounded-[20px] bg-white/5 py-4 text-sm font-bold text-zinc-300 transition hover:bg-white/10 hover:text-white"
+                      >
+                        Show all {results.length} posts in {activeCategory}
+                      </button>
+                    </div>
+                  ) : (
+                    <EmptyState title={`No posts in ${activeCategory}`} description="Be the first to share something!" />
+                  )}
+                </div>
+              </section>
             )}
 
-            {/* 🏁 FULL LIST / FOR YOU VIEW */}
+            {/* 📈 TRENDING DIRECTORY (Glass Card) */}
+            {!isFullList && !debouncedQuery && activeCategory === "trending" && (
+              <section className="overflow-hidden rounded-[32px] border border-white/10 bg-[#121212]/90 p-2 shadow-[0_30px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl animate-in fade-in duration-500">
+                <div className="p-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-500">Live Trends</p>
+                    <h2 className="font-display mt-1 text-2xl text-white">Global Topics</h2>
+                </div>
+                <div className="divide-y divide-white/5">
+                  {trendingTopics.map(topic => (
+                    <button
+                      key={topic.name}
+                      onClick={() => {
+                        setActiveCategory(topic.name);
+                        setIsFullList(true);
+                      }}
+                      className="group flex w-full items-center justify-between p-5 text-left transition hover:bg-white/[0.04]"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 transition group-hover:text-rose-400">Trending Now</p>
+                        <h2 className="mt-1 font-display text-[20px] text-white transition group-hover:translate-x-1">#{topic.name}</h2>
+                        <p className="mt-1 text-xs text-zinc-500">{topic.count} posts shared today</p>
+                      </div>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-zinc-400 transition group-hover:bg-white/10 group-hover:text-white">
+                        <DotsIcon className="h-5 w-5" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 🏁 FEED VIEW (Matching Home Style) */}
             {(isFullList || debouncedQuery || activeCategory === "for-you") && (
-              <div className="divide-y divide-white/10 animate-in fade-in duration-500">
-                {results.length > 0 ? results.map((p, idx) => renderPostItem(p, idx, false)) : (
-                  <div className="p-10 text-center">
-                    <EmptyState title="No results found" description="Try another category" />
-                  </div>
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                {results.length > 0 ? results.map((p) => (
+                   <div key={p.$id} className="overflow-hidden rounded-[32px] border border-white/10 bg-[#121212]/90 p-1 shadow-[0_20px_60px_rgba(0,0,0,0.2)] backdrop-blur-xl">
+                      {renderPostItem(p, false)}
+                   </div>
+                )) : (
+                  <EmptyState title="No results found" description="Try another category" />
                 )}
               </div>
             )}
