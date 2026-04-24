@@ -70,7 +70,9 @@ export default function CreatePost() {
         try {
             const imageUrl = getFileUrl(imageId); 
             
-            const modRes = await fetch("/moderate-image", {
+            // Use environment variable for production, fallback to relative path for local proxy
+            const apiUrl = import.meta.env.VITE_MODERATION_API_URL || "";
+            const modRes = await fetch(`${apiUrl}/moderate-image`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ imageUrl })
