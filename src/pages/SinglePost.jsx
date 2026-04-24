@@ -23,7 +23,7 @@ import likeService from "../appwrite/like";
 import postService from "../appwrite/post";
 import { syncFavorite, syncLike } from "../lib/engagement";
 import { formatRelativeTime, getFileUrl, getHandle } from "../lib/ui";
-
+import ShareModal from "../components/ShareModal";
 import { confirm } from "../confirmService"; 
 
 export default function SinglePost() {
@@ -41,6 +41,7 @@ export default function SinglePost() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -329,7 +330,10 @@ export default function SinglePost() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  if (window.history.length > 1) navigate(-1);
+                  else navigate("/");
+                }}
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-300 transition hover:border-white/20 hover:text-white"
                 aria-label="Go back"
               >
@@ -428,6 +432,14 @@ export default function SinglePost() {
               <CommentIcon className="h-5 w-5" />
               <span>{post.commentCount}</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setShareOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-white/5 hover:text-white"
+            >
+              <ShareIcon className="h-5 w-5" />
+              <span>Share</span>
+            </button>
             <FavoriteButton
               saved={post.saved}
               onToggle={handleFavoriteToggle}
@@ -469,6 +481,13 @@ export default function SinglePost() {
           onDelete={handleDeleteComment}
         />
       </div>
+
+      {shareOpen && (
+        <ShareModal 
+          post={post} 
+          onClose={() => setShareOpen(false)} 
+        />
+      )}
     </div>
   );
 }
