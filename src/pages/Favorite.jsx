@@ -196,13 +196,19 @@ export default function Favorites() {
                     />
                   ) : (
                     <div
-                      className={`flex h-full w-full items-center justify-center p-4 bg-zinc-950 relative overflow-hidden group/textcard`}
+                      className={`flex h-full w-full items-center justify-center p-4 relative overflow-hidden group/textcard ${
+                        post.audioId ? `bg-gradient-to-br ${gradient}` : "bg-zinc-950"
+                      }`}
                     >
-                      {/* Subtle pattern / texture overlay */}
-                      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+                      {/* Subtle pattern / texture overlay (text cards only) */}
+                      {!post.audioId && (
+                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+                      )}
                       
-                      {/* Darker gradient bleed from the corners */}
-                      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-20 mix-blend-overlay`}></div>
+                      {/* Darker gradient bleed from the corners (text cards only) */}
+                      {!post.audioId && (
+                        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-20 mix-blend-overlay`}></div>
+                      )}
 
                       {/* BG decoration */}
                       <div className="absolute inset-0 flex items-center justify-center select-none">
