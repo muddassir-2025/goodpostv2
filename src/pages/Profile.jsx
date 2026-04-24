@@ -312,10 +312,21 @@ export default function Profile() {
                     />
                   ) : (
                     <div className={`flex h-full w-full items-center justify-center p-6 bg-gradient-to-br ${gradient} relative overflow-hidden group/item`}>
-                       {/* Subtle Background Icon */}
-                       <div className="absolute inset-0 flex items-center justify-center opacity-10 group-hover/item:opacity-20 transition-opacity">
+                       {/* Subtle Background Icon or Waveform */}
+                       <div className="absolute inset-0 flex items-center justify-center opacity-10 group-hover/item:opacity-25 transition-opacity">
                          {post.audioId ? (
-                           <PlayIcon className="h-32 w-32 text-white" />
+                           <div className="flex items-center justify-center gap-1 w-full h-full px-4">
+                              {[...Array(10)].map((_, i) => (
+                                <div 
+                                  key={i} 
+                                  className="w-1.5 bg-white rounded-full animate-waveform" 
+                                  style={{ 
+                                    height: `${20 + Math.random() * 50}%`,
+                                    animationDelay: `${i * 0.1}s` 
+                                  }} 
+                                />
+                              ))}
+                           </div>
                          ) : (
                            <div className="text-[120px] font-black text-white leading-none select-none">
                              {post.title.charAt(0).toUpperCase()}
