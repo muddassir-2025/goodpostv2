@@ -72,17 +72,30 @@ app.post("/api/moderate", async (req, res) => {
         const predictions = await model.classify(imgTensor);
         imgTensor.dispose(); // Cleanup memory
 
-        // 4. Decision Logic
+        // 4. Decision Logic (Strict Mode)
         const unsafeLabels = ["Porn", "Hentai", "Sexy"];
-        const isUnsafe = predictions.some(p => 
-            unsafeLabels.includes(p.className) && p.probability > 0.6 // 60% confidence threshold
+        
+        // Check 1: Any single unsafe category > 30%
+        const singleCategoryViolation = predictions.some(p => 
+            unsafeLabels.includes(p.className) && p.probability > 0.3
         );
 
-        // 📊 Terminal Logging (What the user wants to see)
+        // Check 2: Sum of all unsafe categories > 40% (Catches suggestive images that don't hit 30% in one label)
+        const nsfwScore = predictions
+            .filter(p => unsafeLabels.includes(p.className))
+            .reduce((sum, p) => sum + p.probability, 0);
+        
+        const sumViolation = nsfwScore > 0.4;
+
+        const isUnsafe = singleCategoryViolation || sumViolation;
+
+        // 📊 Terminal Logging
         console.log("\n--- MODERATION LOG ---");
         console.log("Image URL:", imageUrl);
+        console.log("NSFW Total Score:", (nsfwScore * 100).toFixed(2) + "%");
         console.log("Predictions:", predictions.map(p => `${p.className}: ${(p.probability * 100).toFixed(2)}%`).join(" | "));
         console.log("Status:", isUnsafe ? "🚫 BLOCKED" : "✅ ALLOWED");
+        if (isUnsafe) console.log("Reason:", singleCategoryViolation ? "High single category score" : "High aggregate NSFW score");
         console.log("----------------------\n");
 
         res.json({
