@@ -169,6 +169,40 @@ class MessageService {
     }
   }
 
+  // ✅ Edit a message
+  async editMessage(messageId, newText) {
+    try {
+      return await this.databases.updateDocument(
+        this.databaseId,
+        this.messagesId,
+        messageId,
+        {
+          text: newText,
+        }
+      );
+    } catch (error) {
+      console.log("editMessage error:", error);
+      throw error;
+    }
+  }
+
+  // ✅ Delete a message (WhatsApp style)
+  async deleteMessage(messageId) {
+    try {
+      return await this.databases.updateDocument(
+        this.databaseId,
+        this.messagesId,
+        messageId,
+        {
+          text: "🚫 This message was deleted",
+        }
+      );
+    } catch (error) {
+      console.log("deleteMessage error:", error);
+      throw error;
+    }
+  }
+
   // ✅ Real-time subscription
   subscribeToMessages(conversationId, callback) {
     return this.client.subscribe(

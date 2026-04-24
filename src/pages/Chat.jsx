@@ -3,7 +3,7 @@ import { ID } from "appwrite";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Avatar from "../components/Avatar";
-import { ArrowLeftIcon } from "../components/ui/Icons";
+import { ArrowLeftIcon, EditIcon, TrashIcon, CloseIcon } from "../components/ui/Icons";
 import messageService from "../appwrite/message";
 import postService from "../appwrite/post";
 import { formatRelativeTime, getHandle } from "../lib/ui";
@@ -20,6 +20,7 @@ export default function Chat() {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState(null);
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -105,6 +106,21 @@ export default function Chat() {
     setNewMessage("");
     setSending(true);
 
+    if (editingMessageId) {
+      // HANDLE EDIT
+      try {
+        const actualMsg = await messageService.editMessage(editingMessageId, text);
+        setMessages(prev => prev.map(m => m.$id === editingMessageId ? actualMsg : m));
+        setEditingMessageId(null);
+      } catch (err) {
+        console.error("Failed to edit", err);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    // HANDLE SEND NEW
     // Optimistic UI update
     const tempId = ID.unique();
     const tempMsg = {
@@ -128,6 +144,20 @@ export default function Chat() {
       setMessages(prev => prev.filter(m => m.$id !== tempId));
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleDelete = async (msgId) => {
+    if (!window.confirm("Delete this message for everyone?")) return;
+    try {
+      const actualMsg = await messageService.deleteMessage(msgId);
+      setMessages(prev => prev.map(m => m.$id === msgId ? actualMsg : m));
+      if (editingMessageId === msgId) {
+        setEditingMessageId(null);
+        setNewMessage("");
+      }
+    } catch (error) {
+      console.error("Failed to delete", error);
     }
   };
 
@@ -171,10 +201,15 @@ export default function Chat() {
           messages.map((msg, index) => {
             const isMe = msg.senderId === user.$id;
             const showAvatar = !isMe && (index === 0 || messages[index - 1].senderId !== msg.senderId);
+            const isDeleted = msg.text === "🚫 This message was deleted";
+            
+            // Check if within 15 minutes
+            const msgTime = new Date(msg.createdAt).getTime();
+            const canEdit = isMe && !isDeleted && (Date.now() - msgTime <= 15 * 60 * 1000);
 
             return (
-              <div key={msg.$id} className={`flex ${isMe ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2`}>
-                <div className={`flex gap-2 max-w-[75%] sm:max-w-[65%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+              <div key={msg.$id} className={`group flex ${isMe ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2`}>
+                <div className={`flex gap-2 max-w-[75%] sm:max-w-[65%] ${isMe ? "flex-row-reverse" : "flex-row"} items-center`}>
                   
                   {/* Avatar Placeholder for alignment if no avatar needed this row */}
                   {!isMe && (
@@ -186,6 +221,7 @@ export default function Chat() {
                   <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                     <div
                       className={`px-4 py-2 rounded-2xl text-[15px] leading-relaxed ${
+                        isDeleted ? "italic text-zinc-500 bg-white/5 border border-white/10" :
                         isMe
                           ? "bg-blue-600 text-white rounded-br-sm"
                           : "bg-white/10 text-zinc-100 rounded-bl-sm"
@@ -197,6 +233,27 @@ export default function Chat() {
                       {formatRelativeTime(msg.createdAt)}
                     </span>
                   </div>
+
+                  {/* Actions (Hover) */}
+                  {canEdit && (
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 mx-2">
+                      <button 
+                        onClick={() => {
+                          setEditingMessageId(msg.$id);
+                          setNewMessage(msg.text);
+                        }}
+                        className="p-1.5 rounded-full bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 transition"
+                      >
+                        <EditIcon className="h-3 w-3" />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(msg.$id)}
+                        className="p-1.5 rounded-full bg-white/5 text-zinc-400 hover:text-rose-500 hover:bg-rose-500/10 transition"
+                      >
+                        <TrashIcon className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -213,7 +270,25 @@ export default function Chat() {
       </div>
 
       {/* INPUT */}
-      <div className="p-4 bg-black/40 border-t border-white/10">
+      <div className="p-4 bg-black/40 border-t border-white/10 relative">
+        {editingMessageId && (
+          <div className="absolute bottom-full left-0 w-full bg-zinc-900 border-t border-white/10 px-4 py-2 flex items-center justify-between text-xs animate-in fade-in slide-in-from-bottom-2">
+            <div className="flex items-center gap-2 text-blue-400 font-medium">
+              <EditIcon className="h-3 w-3" />
+              Editing message
+            </div>
+            <button 
+              onClick={() => {
+                setEditingMessageId(null);
+                setNewMessage("");
+              }}
+              className="p-1 hover:bg-white/10 rounded-full text-zinc-400"
+            >
+              <CloseIcon className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleSend} className="flex gap-2">
           <input
             type="text"
@@ -227,7 +302,7 @@ export default function Chat() {
             disabled={!newMessage.trim() || sending}
             className="shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold transition hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            ↑
+            {editingMessageId ? "✓" : "↑"}
           </button>
         </form>
       </div>
