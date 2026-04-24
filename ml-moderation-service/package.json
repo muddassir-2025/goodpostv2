@@ -8,11 +8,13 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "*",
-    "cors": "*",
-    "nsfwjs": "*",
+    "@google-cloud/vision": "^5.3.5",
     "@tensorflow/tfjs": "*",
     "axios": "*",
-    "jimp": "0.22.10"
+    "cors": "*",
+    "dotenv": "^17.4.2",
+    "express": "*",
+    "jimp": "0.22.10",
+    "nsfwjs": "*"
   }
 }

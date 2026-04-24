@@ -1,8 +1,11 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import axios from "axios";
-import * as tf from "@tensorflow/tfjs-node";
-import nsfw from "nsfwjs";
+import * as tf from "@tensorflow/tfjs";
+import * as nsfw from "nsfwjs";
+import jimp from "jimp";
+import { moderateImage } from "./moderateImage.js";
 
 const app = express();
 app.use(cors());
@@ -29,15 +32,23 @@ loadModel();
  * Helper: classify image buffer
  */
 async function classifyImage(buffer) {
-    const imageTensor = tf.node
-        .decodeImage(new Uint8Array(buffer), 3)
-        .resizeBilinear([224, 224])
-        .expandDims(0);
+    const image = await jimp.read(Buffer.from(buffer));
+    image.resize(224, 224);
+    
+    const numChannels = 3;
+    const numPixels = image.bitmap.width * image.bitmap.height;
+    const values = new Int32Array(numPixels * numChannels);
 
+    for (let i = 0; i < numPixels; i++) {
+        for (let c = 0; c < numChannels; c++) {
+            values[i * numChannels + c] = image.bitmap.data[i * 4 + c];
+        }
+    }
+
+    const imageTensor = tf.tensor3d(values, [image.bitmap.height, image.bitmap.width, numChannels], 'int32');
     const predictions = await model.classify(imageTensor);
-
+    
     imageTensor.dispose();
-
     return predictions;
 }
 
@@ -56,8 +67,8 @@ function isNSFW(predictions) {
     const sumNSFW = porn + hentai + sexy;
 
     // Strict Mode Calibration
-    const isUnsafe = maxNSFW > 0.35 || sumNSFW > 0.45;
-    const borderline = maxNSFW > 0.2 && !isUnsafe;
+    const isUnsafe = maxNSFW > 0.05 || sumNSFW > 0.1;
+    const borderline = maxNSFW > 0.01 && !isUnsafe;
 
     return {
         isUnsafe,
@@ -68,19 +79,19 @@ function isNSFW(predictions) {
 }
 
 /**
- * API endpoint
+ * Unified API endpoint (ML Model -> Vision API)
  */
-app.post("/api/moderate", async (req, res) => {
+app.post("/moderate-image", async (req, res) => {
     const { imageUrl } = req.body;
 
-    console.log(`\n📥 Request: ${imageUrl}`);
+    console.log(`\n📥 Unified Moderation Request: ${imageUrl}`);
 
     if (!imageUrl) {
         return res.status(400).json({ error: "imageUrl is required" });
     }
 
     if (!model) {
-        return res.status(503).json({ error: "Model still loading" });
+        return res.status(503).json({ error: "ML Model still loading" });
     }
 
     try {
@@ -88,47 +99,38 @@ app.post("/api/moderate", async (req, res) => {
         const response = await axios.get(imageUrl, {
             responseType: "arraybuffer",
         });
-
         const buffer = response.data;
 
-        // 2. Classify
+        // 2. ML Model Check (nsfwjs)
+        console.log("➡️ Running ML Model...");
         const predictions = await classifyImage(buffer);
+        const mlResult = isNSFW(predictions);
 
-        // 3. Decision
-        const result = isNSFW(predictions);
+        if (mlResult.isUnsafe) {
+            console.log("🚫 BLOCKED by ML Model (Fast Reject)");
+            console.log("NSFW Max Score:", (mlResult.score * 100).toFixed(2) + "%");
+            return res.json({
+                allowed: false,
+                reason: "Explicit content detected by initial scan",
+                raw: predictions,
+            });
+        }
 
-        const allowed = !result.isUnsafe;
+        console.log("✅ Passed ML Model, sending to Google Vision API...");
 
-        // 4. Logging
-        console.log("\n--- MODERATION RESULT ---");
-        console.log("URL:", imageUrl);
-        console.log(
-            "Predictions:",
-            predictions.map(
-                (p) =>
-                    `${p.className}: ${(p.probability * 100).toFixed(2)}%`
-            )
-        );
-        console.log("NSFW Max Score:", (result.score * 100).toFixed(2) + "%");
-        console.log("NSFW Sum Score:", (result.sumScore * 100).toFixed(2) + "%");
-        console.log(
-            "Status:",
-            allowed ? "✅ ALLOWED" : "🚫 BLOCKED"
-        );
-        if (!allowed) console.log("Reason:", result.score > 0.35 ? "High category score" : "High aggregate score");
-        console.log("------------------------\n");
+        // 3. Google Vision API Check
+        const visionResult = await moderateImage(imageUrl);
+        
+        console.log("Vision API Result:", visionResult.allowed ? "✅ ALLOWED" : "🚫 BLOCKED");
+        if (!visionResult.allowed) console.log("Reason:", visionResult.reason);
 
-        // 5. Response
-        return res.json({
-            allowed,
-            nsfwScore: result.score,
-            borderline: result.borderline,
-            predictions,
-        });
+        return res.json(visionResult);
     } catch (err) {
-        console.error("❌ Error:", err.message);
+        console.error("❌ Endpoint Error:", err.message);
         return res.status(500).json({
-            error: "Failed to process image",
+            allowed: false,
+            reason: "Image moderation service unavailable",
+            raw: null
         });
     }
 });

@@ -169,7 +169,7 @@ export default function PostCard({
               src={imageSrc}
               alt={post.title}
               loading={isPriority ? "eager" : "lazy"}
-              fetchpriority={isPriority ? "high" : "auto"}
+              fetchPriority={isPriority ? "high" : "auto"}
               className="w-full max-h-[450px] object-contain bg-zinc-900"
             />
           ) : (

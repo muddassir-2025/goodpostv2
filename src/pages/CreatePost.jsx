@@ -70,7 +70,7 @@ export default function CreatePost() {
         try {
             const imageUrl = getFileUrl(imageId); 
             
-            const modRes = await fetch("http://localhost:3000/api/moderate", {
+            const modRes = await fetch("http://localhost:3000/moderate-image", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ imageUrl })

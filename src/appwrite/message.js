@@ -239,14 +239,12 @@ class MessageService {
     );
   }
 
-  // ✅ Clear chat (Soft-delete all messages)
+  // ✅ Clear chat (Hard-delete all messages)
   async clearChat(conversationId) {
     try {
       const messages = await this.getMessages(conversationId);
       const updatePromises = (messages?.documents || []).map((msg) =>
-        this.databases.updateDocument(this.databaseId, this.messagesId, msg.$id, {
-          text: "🚫 This message was deleted",
-        })
+        this.databases.deleteDocument(this.databaseId, this.messagesId, msg.$id)
       );
       await Promise.all(updatePromises);
 
@@ -266,19 +264,15 @@ class MessageService {
     }
   }
 
-  // ✅ Delete Conversation (soft-clear + mark as deleted)
+  // ✅ Delete Conversation (hard-clear + mark as deleted)
   async deleteConversation(conversationId) {
     try {
       await this.clearChat(conversationId);
-      // Mark conversation as inactive
-      await this.databases.updateDocument(
+      // Delete conversation entirely
+      await this.databases.deleteDocument(
         this.databaseId,
         this.conversationsId,
-        conversationId,
-        {
-          lastMessage: "[Conversation deleted]",
-          unreadCount: 0,
-        }
+        conversationId
       );
     } catch (error) {
       console.log("deleteConversation error:", error);

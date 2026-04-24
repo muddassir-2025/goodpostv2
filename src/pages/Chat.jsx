@@ -24,7 +24,6 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [menuOpenId, setMenuOpenId] = useState(null);
-  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState("");
 
@@ -172,38 +171,40 @@ export default function Chat() {
     }
   };
  
-  const handleClearChat = () => {
-    setHeaderMenuOpen(false);
-    setTimeout(async () => {
-      const isConfirmed = await confirm("Are you sure you want to clear all messages in this chat? This cannot be undone.");
-      if (!isConfirmed) return;
-      try {
-        // Immediately update the UI
-        setMessages(prev => prev.map(m => ({ ...m, text: "🚫 This message was deleted" })));
-        // Then sync with server
-        await messageService.clearChat(conversationId);
-      } catch (error) {
-        console.error("Failed to clear chat", error);
-        // Reload messages if it failed
-        const msgs = await messageService.getMessages(conversationId);
-        setMessages(msgs.documents || []);
-      }
-    }, 150);
+  const handleClearChat = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const isConfirmed = await confirm("Are you sure you want to clear all messages in this chat? This cannot be undone.");
+    if (!isConfirmed) return;
+    try {
+      // Immediately update the UI
+      setMessages([]);
+      // Then sync with server
+      await messageService.clearChat(conversationId);
+    } catch (error) {
+      console.error("Failed to clear chat", error);
+      // Reload messages if it failed
+      const msgs = await messageService.getMessages(conversationId);
+      setMessages(msgs.documents || []);
+    }
   };
 
-  const handleDeleteConversation = () => {
-    setHeaderMenuOpen(false);
-    setTimeout(async () => {
-      const isConfirmed = await confirm("Delete this conversation? All messages will be cleared.");
-      if (!isConfirmed) return;
-      try {
-        await messageService.deleteConversation(conversationId);
-        navigate("/messages");
-      } catch (error) {
-        console.error("Failed to delete conversation", error);
-        navigate("/messages");
-      }
-    }, 150);
+  const handleDeleteConversation = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const isConfirmed = await confirm("Delete this conversation? All messages will be cleared.");
+    if (!isConfirmed) return;
+    try {
+      await messageService.deleteConversation(conversationId);
+      navigate("/messages");
+    } catch (error) {
+      console.error("Failed to delete conversation", error);
+      navigate("/messages");
+    }
   };
  
   const filteredMessages = messages.filter(m => 
@@ -252,41 +253,23 @@ export default function Chat() {
                 <SearchIcon className="h-4 w-4" />
               </button>
  
-              {/* Options Menu */}
-              <div className="relative">
-                <button 
-                  onClick={() => setHeaderMenuOpen(!headerMenuOpen)}
-                  className={`p-2 rounded-full transition-colors ${headerMenuOpen ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/10 hover:text-white"}`}
-                >
-                  <DotsIcon className="h-4 w-4 rotate-90" />
-                </button>
- 
-                <AnimatePresence>
-                  {headerMenuOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute right-0 top-full mt-2 w-48 z-50 rounded-2xl border border-white/[0.08] bg-zinc-900/90 backdrop-blur-xl p-1.5 shadow-2xl overflow-hidden"
-                    >
-                      <button 
-                        onClick={handleClearChat}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-bold text-white/70 hover:bg-white/10 hover:text-white transition"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                        Clear Chat
-                      </button>
-                      <button 
-                        onClick={handleDeleteConversation}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-bold text-rose-500 hover:bg-rose-500/10 transition"
-                      >
-                        <CloseIcon className="h-4 w-4" />
-                        Delete Chat
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              <button 
+                type="button"
+                onClick={handleClearChat}
+                className="p-2 rounded-full text-white/40 hover:bg-white/10 hover:text-white transition-colors"
+                title="Clear Chat"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+
+              <button 
+                type="button"
+                onClick={handleDeleteConversation}
+                className="p-2 rounded-full text-rose-500/60 hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                title="Delete Chat"
+              >
+                <CloseIcon className="h-4 w-4" />
+              </button>
             </div>
           </div>
         ) : null}

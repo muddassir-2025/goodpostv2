@@ -70,6 +70,20 @@ class Authservice {
     }
   }
 
+  // 🌐 Google Auth
+  async googleAuth() {
+    try {
+      this.account.createOAuth2Session(
+        "google",
+        `${window.location.origin}/`,
+        `${window.location.origin}/login`
+      );
+    } catch (error) {
+      console.error("google login error:", error);
+      throw error;
+    }
+  }
+
   // 👤 Current User
   async getCurrentUser() {
     try {
