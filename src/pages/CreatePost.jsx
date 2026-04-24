@@ -22,7 +22,7 @@ export default function CreatePost() {
 
   const [selectedTags, setSelectedTags] = useState([]);
 
-  const TAGS = ["Islamic","Quran","Quote","memes","art","Nasheed", "News", "Travel", "Education","Tech","Health","Other"];
+  const TAGS = ["Islamic", "Quran", "Knowledge", "Memes", "Audio", "Art", "Sports", "Travel", "Other"];
 
   useEffect(() => {
     if (!image) return setImagePreview("");

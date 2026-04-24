@@ -23,6 +23,9 @@ export default function EditPost() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [selectedTags, setSelectedTags] = useState([]);
+
+  const TAGS = ["Islamic", "Quran", "Knowledge", "Memes", "Audio", "Art", "Sports", "Travel", "Other"];
 
   useEffect(() => {
     let active = true;
@@ -37,6 +40,14 @@ export default function EditPost() {
           setContent(post.content || "");
           setOldImageId(post.featuredImg || null);
           setOldAudioId(post.audioId || null);
+          
+          // Map stored tags back to display case
+          if (post.tags) {
+            const displayTags = post.tags.map(t => 
+              TAGS.find(display => display.toLowerCase() === t.toLowerCase()) || t
+            );
+            setSelectedTags(displayTags);
+          }
         }
       } catch {
         if (active) {
@@ -120,6 +131,7 @@ export default function EditPost() {
         slug: createSlug(resolvedTitle) || `post-${Date.now()}`,
         featuredImg: nextImageId,
         audioId: nextAudioId,
+        tags: selectedTags.map(t => t.toLowerCase()),
       });
 
       navigate("/");
@@ -201,6 +213,40 @@ export default function EditPost() {
                 placeholder="Caption"
               />
             </label>
+
+            {/* TAGS */}
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-zinc-300">
+                Update Tags (required)
+              </span>
+              
+              <div className="flex flex-wrap gap-2 m-3">
+                {TAGS.map((tag) => {
+                  const active = selectedTags.includes(tag);
+
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTags((prev) =>
+                          prev.includes(tag)
+                            ? prev.filter((t) => t !== tag)
+                            : [...prev, tag]
+                        );
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs border transition ${
+                        active
+                          ? "bg-white text-black border-white"
+                          : "border-white/20 text-white hover:bg-white/10"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="cursor-pointer rounded-[24px] border border-white/10 bg-black/35 p-4 transition hover:border-white/20 hover:bg-white/5">
