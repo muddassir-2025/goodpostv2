@@ -3,7 +3,7 @@ import { ID } from "appwrite";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Avatar from "../components/Avatar";
-import { ArrowLeftIcon, EditIcon, TrashIcon, CloseIcon } from "../components/ui/Icons";
+import { ArrowLeftIcon, EditIcon, TrashIcon, CloseIcon, DotsIcon } from "../components/ui/Icons";
 import messageService from "../appwrite/message";
 import postService from "../appwrite/post";
 import { formatRelativeTime, getHandle } from "../lib/ui";
@@ -21,6 +21,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState(null);
+  const [menuOpenId, setMenuOpenId] = useState(null);
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -234,24 +235,41 @@ export default function Chat() {
                     </span>
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions Menu */}
                   {canEdit && (
-                    <div className="opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex flex-col sm:flex-row items-center gap-1 mx-2 shrink-0">
+                    <div className="relative opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center mx-2 shrink-0">
                       <button 
-                        onClick={() => {
-                          setEditingMessageId(msg.$id);
-                          setNewMessage(msg.text);
-                        }}
-                        className="p-2 sm:p-1.5 rounded-full bg-white/10 sm:bg-white/5 text-zinc-300 sm:text-zinc-400 hover:text-white hover:bg-white/20 sm:hover:bg-white/10 transition"
+                        onClick={() => setMenuOpenId(menuOpenId === msg.$id ? null : msg.$id)}
+                        className="p-1.5 rounded-full bg-white/5 text-zinc-400 hover:text-white hover:bg-white/20 transition"
                       >
-                        <EditIcon className="h-4 w-4 sm:h-3 sm:w-3" />
+                        <DotsIcon className="h-4 w-4" />
                       </button>
-                      <button 
-                        onClick={() => handleDelete(msg.$id)}
-                        className="p-2 sm:p-1.5 rounded-full bg-white/10 sm:bg-white/5 text-zinc-300 sm:text-zinc-400 hover:text-rose-500 hover:bg-rose-500/20 sm:hover:bg-rose-500/10 transition"
-                      >
-                        <TrashIcon className="h-4 w-4 sm:h-3 sm:w-3" />
-                      </button>
+
+                      {menuOpenId === msg.$id && (
+                        <div className="absolute right-0 top-full mt-1 z-50 w-32 rounded-xl border border-white/10 bg-zinc-900 p-1 shadow-2xl animate-in fade-in zoom-in-95">
+                          <button 
+                            onClick={() => {
+                              setEditingMessageId(msg.$id);
+                              setNewMessage(msg.text);
+                              setMenuOpenId(null);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white hover:bg-white/10 transition"
+                          >
+                            <EditIcon className="h-3 w-3" />
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => {
+                              handleDelete(msg.$id);
+                              setMenuOpenId(null);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10 transition"
+                          >
+                            <TrashIcon className="h-3 w-3" />
+                            Delete
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
