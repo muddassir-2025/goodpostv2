@@ -169,27 +169,10 @@ export default function PostCard({
               className="w-full max-h-[450px] object-contain bg-zinc-900"
             />
           ) : (
-            <div className="flex aspect-4/5 flex-col items-center justify-center bg-gradient-to-br from-indigo-950 via-zinc-900 to-black px-10 text-center relative overflow-hidden group/audio">
-              {/* Animated Waveform Background */}
-              <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-20 group-hover/audio:opacity-40 transition-opacity">
-                {[...Array(15)].map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="w-1 bg-white rounded-full animate-waveform" 
-                    style={{ 
-                      height: `${20 + Math.random() * 60}%`,
-                      animationDelay: `${i * 0.1}s` 
-                    }} 
-                  />
-                ))}
-              </div>
-              
-              <div className="relative z-10">
-                <div className="mb-4 inline-flex h-20 w-20 items-center justify-center rounded-full bg-white/10 backdrop-blur-xl border border-white/20">
-                  <PlayIcon className="h-10 w-10 text-white" />
-                </div>
-                <p className="text-[10px] uppercase tracking-[0.4em] text-indigo-400 font-bold mb-2">Exclusive Audio</p>
-                <h3 className="font-display text-4xl font-black text-white leading-tight drop-shadow-2xl">{post.title}</h3>
+            <div className="flex aspect-4/5 items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(255,115,0,0.28),_transparent_48%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] px-10 text-center">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Audio drop</p>
+                <h3 className="font-display mt-3 text-3xl text-white">{post.title}</h3>
               </div>
             </div>
           )}
