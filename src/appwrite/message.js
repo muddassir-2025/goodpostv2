@@ -31,7 +31,7 @@ class MessageService {
         this.databaseId,
         this.conversationsId,
         [
-          Query.search("members", userId), // Since Appwrite arrays don't have .contains, we often use search or multiple equals if we know the positions, but Appwrite 1.3+ supports contains. Assuming Appwrite supports `Query.contains` or `Query.search`. Let's use `Query.contains("members", userId)` if possible, else we might need a different approach. Actually Appwrite supports `Query.contains("members", [userId])` or similar. Let's use `Query.contains("members", [userId])`.
+          Query.contains("members", [userId]),
           Query.orderDesc("lastMessageAt"),
           Query.limit(50),
         ]

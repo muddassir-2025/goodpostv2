@@ -5,7 +5,7 @@ import Avatar from "../components/Avatar";
 import { ArrowLeftIcon } from "../components/ui/Icons";
 import messageService from "../appwrite/message";
 import postService from "../appwrite/post";
-import { formatRelativeTime } from "../lib/ui";
+import { formatRelativeTime, getHandle } from "../lib/ui";
 
 export default function Chat() {
   const { conversationId } = useParams();
