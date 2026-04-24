@@ -196,8 +196,14 @@ export default function Favorites() {
                     />
                   ) : (
                     <div
-                      className={`flex h-full w-full items-center justify-center p-3 bg-gradient-to-br ${gradient} relative overflow-hidden`}
+                      className={`flex h-full w-full items-center justify-center p-4 bg-zinc-950 relative overflow-hidden group/textcard`}
                     >
+                      {/* Subtle pattern / texture overlay */}
+                      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+                      
+                      {/* Darker gradient bleed from the corners */}
+                      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-20 mix-blend-overlay`}></div>
+
                       {/* BG decoration */}
                       <div className="absolute inset-0 flex items-center justify-center select-none">
                         {post.audioId ? (
@@ -214,16 +220,20 @@ export default function Favorites() {
                             ))}
                           </div>
                         ) : (
-                          <div className="absolute inset-0 bg-white/[0.03] flex items-center justify-center opacity-[0.1] group-hover:opacity-[0.2] transition-opacity">
-                            <span className="text-[100px] font-black text-white/50 leading-none blur-[2px]">
-                              {post.title.charAt(0).toUpperCase()}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] group-hover:opacity-[0.1] transition-opacity">
+                            <span className="text-[120px] font-black text-white leading-none uppercase italic">
+                              {post.title.charAt(0)}
                             </span>
                           </div>
                         )}
                       </div>
-                      <h3 className="relative z-10 text-center text-[10px] sm:text-[11px] font-bold text-white leading-snug line-clamp-3 drop-shadow-sm">
-                        {post.title}
-                      </h3>
+
+                      <div className="relative z-10 flex flex-col items-center">
+                         <h3 className="text-center text-[15px] sm:text-[17px] font-black text-white leading-tight line-clamp-4 tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                           {post.title}
+                         </h3>
+                         <div className="mt-2 h-0.5 w-6 bg-white/20 rounded-full group-hover/textcard:w-10 transition-all duration-300"></div>
+                      </div>
                     </div>
                   )}
 
