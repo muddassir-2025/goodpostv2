@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import UploadModal from "../components/UploadModal";
 import { AudioIcon, ImageIcon } from "../components/ui/Icons";
 import postService from "../appwrite/post";
-import { createSlug, containsForbiddenWord } from "../lib/ui";
+import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
 import * as nsfwjs from "nsfwjs";
 
 export default function CreatePost() {
@@ -68,7 +68,6 @@ export default function CreatePost() {
 
         // 🔥 2. Call ML Moderation Backend (Wait for Response)
         try {
-            const { getFileUrl } = await import("../lib/ui");
             const imageUrl = getFileUrl(imageId); 
             
             const modRes = await fetch("http://localhost:3000/api/moderate", {
@@ -88,10 +87,6 @@ export default function CreatePost() {
             }
         } catch (modErr) {
             console.error("Backend Moderation unavailable:", modErr);
-            // In a strict production environment, you would block the post here if the server is offline:
-            // await postService.deleteFile(imageId);
-            // setLoading(false);
-            // return setError("Safety verification failed. Please try again later.");
         }
       }
 

@@ -5,7 +5,7 @@ import PostSkeleton from "../components/PostSkeleton";
 import UploadModal from "../components/UploadModal";
 import { AudioIcon, ImageIcon } from "../components/ui/Icons";
 import postService from "../appwrite/post";
-import { createSlug, getFileUrl, containsForbiddenWord } from "../lib/ui";
+import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
 
 export default function EditPost() {
   const { id } = useParams();
@@ -107,7 +107,31 @@ export default function EditPost() {
 
       if (image) {
         const uploadedImage = await postService.uploadImage(image, user?.$id);
-        nextImageId = uploadedImage?.$id || oldImageId;
+        const imageId = uploadedImage?.$id;
+        nextImageId = imageId || oldImageId;
+
+        // 🔥 2. Call ML Moderation Backend (Wait for Response)
+        try {
+            const imageUrl = getFileUrl(imageId); 
+            
+            const modRes = await fetch("http://localhost:3000/api/moderate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ imageUrl })
+            });
+
+            const modData = await modRes.json();
+
+            // 3. ONLY THEN proceed if allowed
+            if (modRes.ok && !modData.allowed) {
+                // If the model caught it, delete from Appwrite instantly and abort!
+                await postService.deleteFile(imageId);
+                setSaving(false);
+                return setError("Content Policy Violation: This image has been flagged for containing suggestive or inappropriate content.");
+            }
+        } catch (modErr) {
+            console.error("Backend Moderation unavailable:", modErr);
+        }
 
         if (oldImageId && nextImageId !== oldImageId) {
           await postService.deleteFile(oldImageId);

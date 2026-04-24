@@ -25,6 +25,7 @@ loadModel();
 
 app.post("/api/moderate", async (req, res) => {
     const { imageUrl } = req.body;
+    console.log(`\n[${new Date().toLocaleTimeString()}] 📨 Incoming moderation request for: ${imageUrl}`);
 
     if (!imageUrl) {
         return res.status(400).json({ error: "No imageUrl provided" });
