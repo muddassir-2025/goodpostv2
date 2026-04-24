@@ -360,7 +360,7 @@ export default function CreatePost() {
             error.includes("flagged");
 
           return (
-            <div className="absolute inset-x-0 bottom-150 z-50 flex justify-center px-4 pointer-events-none">
+            <div className="absolute inset-x-0 bottom-30 z-50 flex justify-center px-4 pointer-events-none">
              <div className="pointer-events-auto flex items-center gap-4 rounded-2xl bg-zinc-900/95 px-7 py-4 shadow-[0_25px_60px_rgba(0,0,0,0.5)] border border-white/10 backdrop-blur-xl animate-in slide-in-from-bottom-2 fade-in duration-300 max-w-md w-full">
                 {isPolicyError ? (
                   <ShieldIcon className="h-4 w-4 text-amber-500" />
