@@ -72,12 +72,17 @@ app.post("/api/moderate", async (req, res) => {
         imgTensor.dispose(); // Cleanup memory
 
         // 4. Decision Logic
-        // Neutral and Drawings are safe. 
-        // Porn, Hentai, and Sexy are flagged.
         const unsafeLabels = ["Porn", "Hentai", "Sexy"];
         const isUnsafe = predictions.some(p => 
             unsafeLabels.includes(p.className) && p.probability > 0.6 // 60% confidence threshold
         );
+
+        // 📊 Terminal Logging (What the user wants to see)
+        console.log("\n--- MODERATION LOG ---");
+        console.log("Image URL:", imageUrl);
+        console.log("Predictions:", predictions.map(p => `${p.className}: ${(p.probability * 100).toFixed(2)}%`).join(" | "));
+        console.log("Status:", isUnsafe ? "🚫 BLOCKED" : "✅ ALLOWED");
+        console.log("----------------------\n");
 
         res.json({
             allowed: !isUnsafe,
