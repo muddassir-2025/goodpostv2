@@ -347,17 +347,17 @@ export default function Profile() {
                   ) : (
                     <div
                       className={`flex h-full w-full items-center justify-center p-4 relative overflow-hidden group/textcard ${
-                        post.audioId ? `bg-gradient-to-br ${gradient}` : "bg-zinc-950"
+                        post.audioId ? `bg-gradient-to-br ${gradient}` : "bg-zinc-900"
                       }`}
                     >
                       {/* Subtle pattern / texture overlay (text cards only) */}
                       {!post.audioId && (
-                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
+                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.1) 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
                       )}
                       
                       {/* Darker gradient bleed from the corners (text cards only) */}
                       {!post.audioId && (
-                        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-20 mix-blend-overlay`}></div>
+                        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-30 mix-blend-soft-light`}></div>
                       )}
 
                       {/* BG decoration */}
