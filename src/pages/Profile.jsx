@@ -14,7 +14,14 @@ import {
   PlayIcon,
   ImageIcon,
   ShieldIcon,
+  PencilIcon,
+  TrashIcon,
+  CameraIcon,
 } from "../components/ui/Icons";
+import postService from "../appwrite/post";
+import { login as authLogin } from "../features/auth/authSlice";
+import { confirm, toast } from "../confirmService";
+
 
 /* ─────────────────── helpers ─────────────────── */
 
@@ -84,6 +91,11 @@ export default function Profile() {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [loadingFollow,  setLoadingFollow]  = useState(false);
+  const [isEditingName,  setIsEditingName]  = useState(false);
+  const [newName,        setNewName]        = useState("");
+  const [updatingUser,   setUpdatingUser]   = useState(false);
+  const [uploadingAv,    setUploadingAv]    = useState(false);
+
 
   useEffect(() => {
     async function load() {
@@ -151,6 +163,73 @@ export default function Profile() {
     } catch (e) { console.error(e); }
   }
 
+  async function handleDeleteAccount() {
+    const confirmText = `delete account "${currentUser.name}"`;
+    const isConfirmed = await confirm({
+      message: "Are you absolutely sure you want to delete your account? This action cannot be undone.",
+      requiredInput: confirmText
+    });
+
+    if (!isConfirmed) return;
+
+
+    try {
+      setUpdatingUser(true);
+      await authService.deleteAccount();
+      toast("Account deleted successfully.", "success");
+      dispatch(logout());
+      navigate("/signup");
+    } catch (e) {
+      console.error(e);
+      toast("Failed to delete account. Please try again later.", "error");
+    } finally {
+      setUpdatingUser(false);
+    }
+  }
+
+  async function handleUpdateName() {
+    if (!newName.trim() || newName === currentUser.name) {
+      setIsEditingName(false);
+      return;
+    }
+    setUpdatingUser(true);
+    try {
+      await authService.updateName(newName);
+      const updatedUser = await authService.getCurrentUser();
+      dispatch(authLogin({ userData: updatedUser, isAdmin: currentUser.isAdmin }));
+
+      setIsEditingName(false);
+      toast("Name updated successfully.", "success");
+    } catch (e) { 
+      console.error(e); 
+      toast("Failed to update name.", "error");
+    }
+    finally { setUpdatingUser(false); }
+  }
+
+  async function handleAvatarChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAv(true);
+    try {
+      const res = await postService.uploadImage(file, currentUser.$id);
+      if (res) {
+        await authService.updatePrefs({ avatarId: res.$id });
+        const updatedUser = await authService.getCurrentUser();
+        dispatch(authLogin({ userData: updatedUser, isAdmin: currentUser.isAdmin }));
+
+        toast("Avatar updated successfully.", "success");
+      }
+    } catch (e) { 
+      console.error(e); 
+      toast("Failed to update avatar.", "error");
+    }
+    finally { setUploadingAv(false); }
+  }
+
+
+
   if (!currentUser)
     return (
       <EmptyState
@@ -159,10 +238,12 @@ export default function Profile() {
         description="Your avatar, saved posts, and personal grid all live here."
         actionLabel="Log in"
         actionTo="/login"
+        actionState={{ from: window.location.pathname }}
       />
     );
 
   const profileName =
+
     isOwnProfile
       ? currentUser.name
       : posts[0]?.authorName || `User ${id?.slice(0, 6)}`;
@@ -210,17 +291,73 @@ export default function Profile() {
         <div className="relative px-5 pt-7 pb-6">
           {/* Avatar + name row */}
           <div className="flex items-center gap-4">
-            <div
-              className="h-16 w-16 flex-shrink-0 rounded-full flex items-center justify-center text-[20px] font-extrabold"
-              style={{ background: `${avBg}30`, color: avFg }}
-            >
-              {initials}
+            <div className="relative group/avatar">
+              <div
+                className="h-16 w-16 flex-shrink-0 rounded-full flex items-center justify-center text-[20px] font-extrabold overflow-hidden relative"
+                style={{ background: `${avBg}30`, color: avFg }}
+              >
+                {currentUser.prefs?.avatarId ? (
+                  <img
+                    src={getFileUrl(currentUser.prefs.avatarId)}
+                    alt={profileName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  initials
+                )}
+                
+                {isOwnProfile && (
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer">
+                    <CameraIcon className="h-5 w-5 text-white" />
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                      disabled={uploadingAv}
+                    />
+                  </label>
+                )}
+              </div>
+              {uploadingAv && (
+                <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-indigo-500 flex items-center justify-center">
+                  <div className="h-3 w-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                </div>
+              )}
             </div>
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-[22px] font-extrabold text-white leading-tight truncate">
-                {getHandle(profileName)}
-              </h1>
+              <div className="flex items-center gap-2">
+                {isEditingName ? (
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleUpdateName()}
+                      onBlur={() => !updatingUser && setIsEditingName(false)}
+                      className="bg-white/10 border border-white/20 rounded px-2 py-0.5 text-[18px] font-extrabold text-white outline-none focus:border-indigo-500 w-full"
+                    />
+                  </div>
+                ) : (
+                  <h1 className="text-[22px] font-extrabold text-white leading-tight truncate">
+                    {getHandle(profileName)}
+                  </h1>
+                )}
+                
+                {isOwnProfile && !isEditingName && (
+                  <button
+                    onClick={() => {
+                      setNewName(currentUser.name);
+                      setIsEditingName(true);
+                    }}
+                    className="p-1 rounded-full hover:bg-white/10 text-white/40 hover:text-white transition-colors"
+                  >
+                    <PencilIcon className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
               {isOwnProfile && (
                 <p className="text-[12px] text-white/30 mt-0.5 truncate">
                   {currentUser.email}
@@ -236,12 +373,14 @@ export default function Profile() {
                 >
                   Logout
                 </button>
-                <Link
-                  to="/favorites"
-                  className="px-3.5 py-1.5 rounded-full border border-white/[0.1] bg-white/[0.04] text-white/60 text-[13px] font-semibold hover:bg-white/[0.08] hover:text-white/90 transition-colors"
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={updatingUser}
+                  className="px-3.5 py-1.5 rounded-full border border-rose-500/20 bg-rose-500/5 text-rose-500/60 text-[13px] font-semibold hover:bg-rose-500/10 hover:text-rose-500 transition-colors flex items-center gap-1.5"
                 >
-                  Saved
-                </Link>
+                  <TrashIcon className="h-3.5 w-3.5" />
+                  Delete
+                </button>
               </div>
             )}
 

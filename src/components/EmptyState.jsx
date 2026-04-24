@@ -6,6 +6,7 @@ export default function EmptyState({
   description,
   actionLabel,
   actionTo,
+  actionState,
 }) {
   return (
     <section className="rounded-[30px] border border-dashed border-white/10 bg-[#121212]/80 px-6 py-10 text-center shadow-[0_24px_80px_rgba(0,0,0,0.2)]">
@@ -15,11 +16,13 @@ export default function EmptyState({
       {actionLabel && actionTo ? (
         <Link
           to={actionTo}
+          state={actionState}
           className="mt-6 inline-flex rounded-full bg-zinc-100 px-5 py-3 text-sm font-semibold !text-zinc-950 transition hover:bg-zinc-200 hover:!text-zinc-950"
         >
           {actionLabel}
         </Link>
       ) : null}
+
     </section>
   );
 }

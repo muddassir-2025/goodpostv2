@@ -214,7 +214,7 @@ export default function Messages() {
                   onClick={() => handleUserClick(u)}
                   className="flex items-center gap-4 rounded-[24px] border border-white/[0.05] bg-white/[0.03] px-5 py-4 cursor-pointer transition-all hover:bg-white/[0.06] hover:border-white/10 shadow-lg"
                 >
-                  <Avatar name={u.name} size="lg" />
+                  <Avatar name={u.name} userId={u.id} size="lg" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[15px] font-black text-white truncate">{u.name}</p>
                     <p className="text-[12px] text-white/30 font-medium truncate">{getHandle(u.name)}</p>
@@ -247,7 +247,7 @@ export default function Messages() {
                       onClick={(e) => { e.preventDefault(); navigate(`/profile/${conv.otherUser.id}`); }}
                       className="shrink-0 relative"
                     >
-                      <Avatar name={conv.otherUser.name} size="lg" />
+                      <Avatar name={conv.otherUser.name} userId={conv.otherUser.id} size="lg" />
                       {conv.unreadCount > 0 && (
                         <div className="absolute -top-1 -right-1 h-4 w-4 bg-blue-500 rounded-full border-2 border-[#121212] animate-pulse" />
                       )}

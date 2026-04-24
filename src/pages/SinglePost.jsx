@@ -351,7 +351,7 @@ export default function SinglePost() {
               </button>
 
               <div className="flex items-center gap-2 cursor-pointer " onClick={() => navigate(`/profile/${post.authorID}`)}>
-                <Avatar name={post.authorName} size="md" ring />
+                <Avatar name={post.authorName} userId={post.authorID} size="md" ring />
                 <div>
                   <p className="font-semibold text-white">{getHandle(post.authorName)}</p>
                   <p className="text-xs text-zinc-500">{formatRelativeTime(post.$createdAt)}</p>

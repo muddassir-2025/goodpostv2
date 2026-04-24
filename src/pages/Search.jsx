@@ -37,31 +37,7 @@ const CATEGORIES = [
   { id: "other", label: "Other", emoji: "•" },
 ];
 
-/* ─── tiny helper: author initials avatar ─── */
-function InitialsAvatar({ name, size = "sm" }) {
-  const initials = (name || "?")
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-  const colors = [
-    "bg-violet-500/20 text-violet-300",
-    "bg-sky-500/20 text-sky-300",
-    "bg-emerald-500/20 text-emerald-300",
-    "bg-amber-500/20 text-amber-300",
-    "bg-rose-500/20 text-rose-300",
-  ];
-  const idx = name ? name.charCodeAt(0) % colors.length : 0;
-  const sz = size === "sm" ? "h-7 w-7 text-[11px]" : "h-8 w-8 text-xs";
-  return (
-    <div
-      className={`flex-shrink-0 rounded-full flex items-center justify-center font-bold ${sz} ${colors[idx]}`}
-    >
-      {initials}
-    </div>
-  );
-}
+
 
 export default function Search() {
   const user = useSelector((state) => state.auth.userData);
@@ -204,7 +180,7 @@ export default function Search() {
       >
         {/* Avatar col */}
         <div className="flex-shrink-0 pt-0.5">
-          <InitialsAvatar name={post.authorName} size={compact ? "sm" : "md"} />
+          <Avatar name={post.authorName} userId={post.authorID} size={compact ? "sm" : "md"} />
         </div>
 
         {/* Content col */}
@@ -467,7 +443,7 @@ export default function Search() {
                           onClick={() => handlePostClick(results[0])}
                         >
                           <div className="flex gap-3">
-                            <InitialsAvatar name={results[0].authorName} size="md" />
+                            <Avatar name={results[0].authorName} userId={results[0].authorID} size="md" />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 mb-1.5">
                                 <span className="text-[13px] font-semibold text-white/90">

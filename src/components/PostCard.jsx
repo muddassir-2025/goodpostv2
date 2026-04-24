@@ -71,7 +71,7 @@ export default function PostCard({
           onClick={openProfile}
           className="flex items-center gap-3 text-left cursor-pointer"
         >
-          <Avatar name={post.authorName} size="md" ring />
+          <Avatar name={post.authorName} userId={post.authorID} size="md" ring />
           <div>
             <p className="font-semibold text-white">
               {getHandle(post.authorName)}

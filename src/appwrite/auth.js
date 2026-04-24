@@ -113,6 +113,41 @@ class Authservice {
       throw error;
     }
   }
+
+  // 📝 Update Name
+  async updateName(name) {
+    try {
+      return await this.account.updateName(name);
+    } catch (error) {
+      console.error("updateName error:", error);
+      throw error;
+    }
+  }
+
+  // 📝 Update Prefs (for bio, avatarId, etc.)
+  async updatePrefs(prefs) {
+    try {
+      const currentPrefs = await this.account.getPrefs();
+      return await this.account.updatePrefs({ ...currentPrefs, ...prefs });
+    } catch (error) {
+      console.error("updatePrefs error:", error);
+      throw error;
+    }
+  }
+
+  // 🗑️ Delete Account
+  async deleteAccount() {
+    try {
+
+      // NOTE: Appwrite's Client SDK does not support deleting the user account directly for security.
+      // This action usually requires a Server SDK or a Cloud Function.
+      // For now, we will delete the current session to "log out" the user.
+      return await this.account.deleteSession("current");
+    } catch (error) {
+      console.error("deleteAccount error:", error);
+      throw error;
+    }
+  }
 }
 
 // singleton

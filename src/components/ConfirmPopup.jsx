@@ -1,10 +1,21 @@
 import { useSelector } from "react-redux";
 import { confirmYes, confirmNo } from "../confirmService";
+import { useState, useEffect } from "react";
+
 
 export default function ConfirmPopup() {
-  const { open, message } = useSelector((state) => state.confirm);
+  const { open, message, requiredInput } = useSelector((state) => state.confirm);
+  const [inputValue, setInputValue] = useState("");
+
+  useEffect(() => {
+    if (open) setInputValue("");
+  }, [open]);
 
   if (!open) return null;
+
+  const isConfirmedDisabled = requiredInput && inputValue.toLowerCase() !== requiredInput.toLowerCase();
+
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
@@ -29,6 +40,27 @@ export default function ConfirmPopup() {
           {message}
         </p>
 
+        {requiredInput && (
+          <div className="mt-4">
+            <p className="text-[11px] text-zinc-500 tracking-wide mb-2 font-medium">
+              Please type <span className="text-white font-bold">"{requiredInput}"</span> below:
+            </p>
+
+
+            <input
+              autoFocus
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !isConfirmedDisabled && confirmYes()}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-rose-500/50 transition-colors placeholder:text-zinc-600"
+              placeholder={requiredInput}
+            />
+
+          </div>
+        )}
+
+
         <div className="mt-5 flex justify-end gap-2">
           
           <button
@@ -48,18 +80,19 @@ export default function ConfirmPopup() {
 
           <button
             onClick={confirmYes}
-            className="
+            disabled={isConfirmedDisabled}
+            className={`
               px-4 py-1.5 text-xs rounded-full 
               bg-gradient-to-br from-rose-500 to-rose-600 
               text-white 
               shadow-md 
-              hover:scale-[1.03] 
-              active:scale-[0.97] 
               transition
-            "
+              ${isConfirmedDisabled ? "opacity-30 cursor-not-allowed grayscale" : "hover:scale-[1.03] active:scale-[0.97]"}
+            `}
           >
             Confirm
           </button>
+
 
         </div>
       </div>

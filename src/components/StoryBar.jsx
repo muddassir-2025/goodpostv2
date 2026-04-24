@@ -23,6 +23,7 @@ export default function StoryBar({ stories = [] }) {
           >
             <Avatar
               name={story.name}
+              userId={story.userId}
               src={story.cover}
               size="lg"
               ring

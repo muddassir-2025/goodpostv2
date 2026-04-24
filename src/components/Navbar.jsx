@@ -107,7 +107,7 @@ export default function Navbar() {
               to="/profile"
               className="hidden items-center gap-3 rounded-full border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-zinc-300 transition hover:border-white/20 hover:text-white md:flex"
             >
-              <Avatar name={user.name} size="sm" />
+              <Avatar name={user.name} userId={user.$id} size="sm" />
               <div className="pr-2">
                 <p className="font-medium text-white">{getHandle(user.name)}</p>
                 <p className="text-xs text-zinc-500">Profile</p>

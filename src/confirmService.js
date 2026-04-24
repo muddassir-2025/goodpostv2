@@ -3,8 +3,9 @@ import { showConfirm, hideConfirm, showToast, hideToast } from "./features/error
 
 let resolver = null;
 
-export function confirm(message) {
-  store.dispatch(showConfirm(message));
+export function confirm(options) {
+  const payload = typeof options === "string" ? options : options;
+  store.dispatch(showConfirm(payload));
 
   return new Promise((resolve) => {
     resolver = resolve;

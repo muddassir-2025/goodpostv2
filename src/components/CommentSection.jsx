@@ -31,7 +31,7 @@ export default function CommentSection({
       </div>
 
       <div className="flex gap-3 mb-8">
-        <Avatar name="User" size="sm" />
+        <Avatar name="User" userId={currentUserId} size="sm" />
         <div className="flex-1">
           <input
             value={value}
@@ -53,7 +53,7 @@ export default function CommentSection({
           sortedComments.map((comment) => (
             <div key={comment.$id} className="group flex gap-3 sm:gap-4 animate-in fade-in duration-300">
               <div className="flex-shrink-0">
-                <Avatar name={comment.userName} size="sm" />
+                <Avatar name={comment.userName} userId={comment.userId} size="sm" />
               </div>
               
               <div className="flex-1 min-w-0">

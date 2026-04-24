@@ -1,4 +1,6 @@
-import { getInitials, getStoryGradient } from "../lib/ui";
+import { getInitials, getStoryGradient, getFileUrl } from "../lib/ui";
+import { useSelector } from "react-redux";
+
 
 const sizeMap = {
   sm: "h-10 w-10 text-sm",
@@ -9,25 +11,34 @@ const sizeMap = {
 
 export default function Avatar({
   name,
+  userId,
   src = "",
   size = "md",
   ring = false,
   showAdd = false,
   className = "",
 }) {
+  const currentUser = useSelector((s) => s.auth.userData);
+  const isMe = userId && currentUser && userId === currentUser.$id;
+  
+  // Use provided src, or if it's me, use my avatarId from preferences
+  const finalSrc = src || (isMe && currentUser.prefs?.avatarId ? getFileUrl(currentUser.prefs.avatarId) : "");
+
   const gradient = getStoryGradient(name);
+
   const avatarBody = (
     <div
       className={`relative ${sizeMap[size] || sizeMap.md} overflow-hidden rounded-full border border-white/10 bg-zinc-950 ${className}`}
     >
-      {src ? (
+      {finalSrc ? (
         <img
-          src={src}
+          src={finalSrc}
           alt={name}
           loading="lazy"
           className="h-full w-full object-cover"
         />
       ) : (
+
         <div
           className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${gradient} font-semibold uppercase text-white`}
         >

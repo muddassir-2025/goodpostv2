@@ -219,7 +219,7 @@ export default function Notifications() {
               }`}
             >
               <div className="relative mt-1">
-                <Avatar name={notif.actorName} size="md" />
+                <Avatar name={notif.actorName} userId={notif.actorId} size="md" />
                 <div className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black ${color}`}>
                   <Icon className="h-3 w-3" filled />
                 </div>

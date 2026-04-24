@@ -237,7 +237,8 @@ export default function Chat() {
         ) : otherUser ? (
           <div className="flex-1 flex items-center justify-between">
             <Link to={`/profile/${otherUser.id}`} className="flex items-center gap-3 cursor-pointer group">
-              <Avatar name={otherUser.name} size="md" />
+              <Avatar name={otherUser.name} userId={otherUser.id} size="md" />
+
               <div>
                 <p className="font-extrabold text-white group-hover:text-blue-400 transition-colors leading-tight">{otherUser.name}</p>
                 <p className="text-[11px] text-white/30 font-medium">{getHandle(otherUser.name)}</p>
@@ -328,7 +329,7 @@ export default function Chat() {
                         {!isMe && (
                           <div className="w-8 shrink-0">
                             {showAvatar ? (
-                              <Avatar name={otherUser?.name || "User"} size="sm" />
+                              <Avatar name={otherUser?.name || "User"} userId={otherUser?.id} size="sm" />
                             ) : <div className="w-8" />}
                           </div>
                         )}
@@ -404,7 +405,7 @@ export default function Chat() {
                 <div className="flex flex-col items-center justify-center py-20 text-center">
                    <div className="relative mb-6">
                       <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full scale-150" />
-                      <Avatar name={otherUser?.name || "User"} size="xl" className="relative z-10 scale-125" />
+                      <Avatar name={otherUser?.name || "User"} userId={otherUser?.id} size="xl" className="relative z-10 scale-125" />
                    </div>
                    <h2 className="text-xl font-black text-white mb-1">Start a Conversation</h2>
                    <p className="text-sm text-white/30 max-w-[200px]">Send your first message to connect with {otherUser?.name}.</p>

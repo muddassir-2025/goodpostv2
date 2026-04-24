@@ -125,11 +125,13 @@ export function buildStories(posts = [], user) {
   if (user) {
     stories.push({
       id: `user-${user.$id}`,
+      userId: user.$id,
       label: "Your story",
       name: user.name,
       href: "/profile",
       isOwn: true,
     });
+
     seen.add(user.$id);
   }
 
@@ -145,12 +147,14 @@ export function buildStories(posts = [], user) {
 
     stories.push({
       id: post.authorID,
+      userId: post.authorID,
       label: getHandle(authorName),
       name: authorName,
       href: slug ? `/post/${slug}` : "/",
       cover: post.featuredImg ? getFileUrl(post.featuredImg) : "",
       isOwn: false,
     });
+
   });
 
   return stories.slice(0, 8);
