@@ -361,7 +361,7 @@ export default function CreatePost() {
 
           return (
             <div className="absolute inset-x-0 bottom-150 z-50 flex justify-center px-4 pointer-events-none">
-              <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-zinc-900/95 px-5 py-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] border border-white/10 backdrop-blur-xl animate-in slide-in-from-bottom-2 fade-in duration-300">
+             <div className="pointer-events-auto flex items-center gap-4 rounded-2xl bg-zinc-900/95 px-7 py-4 shadow-[0_25px_60px_rgba(0,0,0,0.5)] border border-white/10 backdrop-blur-xl animate-in slide-in-from-bottom-2 fade-in duration-300 max-w-md w-full">
                 {isPolicyError ? (
                   <ShieldIcon className="h-4 w-4 text-amber-500" />
                 ) : (
@@ -369,7 +369,7 @@ export default function CreatePost() {
                     <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
                   </div>
                 )}
-                <p className="text-[13px] font-medium tracking-tight text-zinc-100">
+                <p className="text-[15px] font-medium tracking-tight text-zinc-100">
                   {error}
                 </p>
                 <div className="ml-2 h-4 w-px bg-white/10" />
