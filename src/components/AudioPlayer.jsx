@@ -110,6 +110,8 @@ const AudioPlayer = forwardRef(({ src, title }, ref) => {
   const handleCardClick = (e) => {
     if (e.target.closest("button") || e.target.closest("input")) return;
 
+    // Only seek on double tap/click
+    if (e.detail !== 2) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const isRight = x > rect.width / 2;

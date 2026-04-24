@@ -144,7 +144,7 @@ export default function SinglePost() {
   const audioSrc = getFileUrl(post.audioId);
 
   const handleImageClick = (e) => {
-    if (!audioSrc) return;
+    if (!audioSrc || e.detail !== 2) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;

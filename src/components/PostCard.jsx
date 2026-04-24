@@ -64,15 +64,20 @@ export default function PostCard({
     const width = rect.width;
 
     if (x < width * 0.35) {
-      audioPlayerRef.current?.skipBackward();
-      setActiveSeek("left");
-      setTimeout(() => setActiveSeek(null), 400);
+      if (e.detail === 2) {
+        audioPlayerRef.current?.skipBackward();
+        setActiveSeek("left");
+        setTimeout(() => setActiveSeek(null), 400);
+      }
     } else if (x > width * 0.65) {
-      audioPlayerRef.current?.skipForward();
-      setActiveSeek("right");
-      setTimeout(() => setActiveSeek(null), 400);
+      if (e.detail === 2) {
+        audioPlayerRef.current?.skipForward();
+        setActiveSeek("right");
+        setTimeout(() => setActiveSeek(null), 400);
+      }
     } else {
-      openPost();
+      // Middle area opens post
+      if (e.detail === 1) openPost();
     }
   };
 
