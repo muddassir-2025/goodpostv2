@@ -25,6 +25,7 @@ export default function EditPost() {
   const [error, setError] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [customTag, setCustomTag] = useState("");
+  const [status, setStatus] = useState("public");
 
   const TAGS = ["Islamic", "Quran", "Knowledge", "Memes", "Audio", "Art", "Sports", "Travel", "Other"];
 
@@ -49,6 +50,7 @@ export default function EditPost() {
             );
             setSelectedTags(displayTags);
           }
+          setStatus(post.status || "public");
         }
       } catch {
         if (active) {
@@ -157,6 +159,7 @@ export default function EditPost() {
         featuredImg: nextImageId,
         audioId: nextAudioId,
         tags: selectedTags.map(t => t.toLowerCase()),
+        status, // ✅ Update privacy status
       });
 
       navigate("/");
@@ -333,6 +336,30 @@ export default function EditPost() {
                   onChange={(event) => setAudio(event.target.files?.[0] || null)}
                 />
               </label>
+            </div>
+
+            {/* PRIVACY SELECTION */}
+            <div className="flex items-center justify-between rounded-[24px] border border-white/10 bg-black/35 p-4">
+              <div className="space-y-0.5">
+                <p className="text-[13px] font-bold text-white">Privacy</p>
+                <p className="text-[11px] text-zinc-500">Visible to {status === "public" ? "everyone" : "only you"}</p>
+              </div>
+              <div className="flex rounded-full bg-white/5 p-1 border border-white/5">
+                {["public", "private"].map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setStatus(opt)}
+                    className={`px-5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider transition-all duration-300 ${
+                      status === opt 
+                        ? "bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.2)]" 
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button

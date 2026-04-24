@@ -26,6 +26,7 @@ class PostService {
   audioId,
   tags = [], // ✅ correct way
   isSystem = false,
+  status = "public", // ✅ received status
 }) {
   try {
     return await this.databases.createDocument(
@@ -44,7 +45,7 @@ class PostService {
 
         tags: tags, // ✅ IMPORTANT FIX
 
-        isPublished: true,
+        isPublished: status === "public", // ✅ Use isPublished instead of status
 
         likeCount: 0,
         commentCount: 0,
@@ -141,11 +142,19 @@ class PostService {
   // ✅ Update Post (FIXED)
   async updatePost(postId, data) {
     try {
+      const finalData = { ...data };
+
+      // ✅ Map status to isPublished if present
+      if (finalData.status) {
+        finalData.isPublished = finalData.status === "public";
+        delete finalData.status;
+      }
+
       return await this.databases.updateDocument(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_TABLE_ID,
         postId,
-        data
+        finalData
       );
     } catch (error) {
       console.log("updatePost error: ", error);

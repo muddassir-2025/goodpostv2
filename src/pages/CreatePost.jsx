@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import UploadModal from "../components/UploadModal";
-import { AudioIcon, ImageIcon } from "../components/ui/Icons";
+import { AudioIcon, ImageIcon, ShieldIcon, XIcon } from "../components/ui/Icons";
 import postService from "../appwrite/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
 import * as nsfwjs from "nsfwjs";
@@ -22,6 +22,7 @@ export default function CreatePost() {
 
   const [selectedTags, setSelectedTags] = useState([]);
   const [customTag, setCustomTag] = useState("");
+  const [status, setStatus] = useState("public");
 
   const TAGS = ["Islamic", "Quran", "Knowledge", "Memes", "Audio", "Art", "Sports", "Travel", "Other"];
 
@@ -42,6 +43,15 @@ export default function CreatePost() {
 
     return () => URL.revokeObjectURL(url);
   }, [audio]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError("");
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -116,6 +126,7 @@ export default function CreatePost() {
 
         // ✅ IMPORTANT FIX
         tags: cleanedTags,
+        status, // ✅ Pass privacy status ("public" or "private")
       });
 
       navigate("/");
@@ -190,11 +201,6 @@ export default function CreatePost() {
           {/* RIGHT SIDE */}
           <div className="space-y-4">
 
-            {error && (
-              <div className="rounded-[22px] border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-                {error}
-              </div>
-            )}
 
             <label className="block space-y-2">
               <span className="text-sm font-medium text-zinc-300">
@@ -312,6 +318,30 @@ export default function CreatePost() {
               </label>
             </div>
 
+            {/* PRIVACY SELECTION */}
+            <div className="flex items-center justify-between rounded-[24px] border border-white/10 bg-black/35 p-4">
+              <div className="space-y-0.5">
+                <p className="text-[13px] font-bold text-white">Privacy</p>
+                <p className="text-[11px] text-zinc-500">Visible to {status === "public" ? "everyone" : "only you"}</p>
+              </div>
+              <div className="flex rounded-full bg-white/5 p-1 border border-white/5">
+                {["public", "private"].map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setStatus(opt)}
+                    className={`px-5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider transition-all duration-300 ${
+                      status === opt 
+                        ? "bg-white text-black shadow-[0_4px_12px_rgba(255,255,255,0.2)]" 
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -321,6 +351,38 @@ export default function CreatePost() {
             </button>
           </div>
         </form>
+
+        {/* Minimalist Toast Notification */}
+        {error && (() => {
+          const isPolicyError = 
+            error.includes("inappropriate") || 
+            error.includes("Policy Violation") || 
+            error.includes("flagged");
+
+          return (
+            <div className="absolute inset-x-0 bottom-150 z-50 flex justify-center px-4 pointer-events-none">
+              <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-zinc-900/95 px-5 py-3 shadow-[0_20px_40px_rgba(0,0,0,0.4)] border border-white/10 backdrop-blur-xl animate-in slide-in-from-bottom-2 fade-in duration-300">
+                {isPolicyError ? (
+                  <ShieldIcon className="h-4 w-4 text-amber-500" />
+                ) : (
+                  <div className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500/20">
+                    <div className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                  </div>
+                )}
+                <p className="text-[13px] font-medium tracking-tight text-zinc-100">
+                  {error}
+                </p>
+                <div className="ml-2 h-4 w-px bg-white/10" />
+                <button 
+                  onClick={() => setError("")}
+                  className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 hover:text-white transition"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </UploadModal>
     </div>
   );

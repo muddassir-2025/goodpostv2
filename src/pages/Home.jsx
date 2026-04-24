@@ -59,7 +59,7 @@ export default function Home() {
           : new Set();
 
         const storyPosts = data.filter((post) =>
-          allowed.has(post.authorID)
+          allowed.has(post.authorID) && (post.isPublished !== false || post.authorID === user?.$id)
         );
 
         let builtStories = buildStories(storyPosts, user);
@@ -97,7 +97,14 @@ export default function Home() {
     ? searchFiltered.filter((p) => allowedUsers.has(p.authorID) && p.authorID !== user?.$id)
     : searchFiltered;
 
-  const mediaFiltered = feedFiltered.filter(p => {
+  // ✅ Global Privacy Filter: Only show public posts, or own private posts
+  const globalFiltered = feedFiltered.filter(p => {
+    const isOwn = p.authorID === user?.$id;
+    const isPublic = p.isPublished !== false;
+    return isPublic || isOwn; 
+  });
+
+  const mediaFiltered = globalFiltered.filter(p => {
     if (mediaFilter === "images") return !!p.featuredImg;
     if (mediaFilter === "audio") return !!p.audioId;
     return true;

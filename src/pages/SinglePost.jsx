@@ -62,6 +62,16 @@ export default function SinglePost() {
           return;
         }
 
+        // Privacy Check: Only owner/admin can see private posts
+        const isOwner = (user?.$id === resolvedPost.authorID) || isAdmin;
+        if (resolvedPost.isPublished === false && !isOwner) {
+          if (active) {
+            setPost(null);
+            setError("This post is private and can only be viewed by the author.");
+          }
+          return;
+        }
+
         const [resolvedComments, likesCount, likedRes, favoriteRes] = await Promise.all([
           commentService.getComments(resolvedPost.$id),
           likeService.countLikes(resolvedPost.$id),

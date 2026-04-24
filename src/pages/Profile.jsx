@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../features/auth/authSlice";
 import authService from "../appwrite/auth";
-import Avatar from "../components/Avatar";
 import EmptyState from "../components/EmptyState";
-import PostSkeleton from "../components/PostSkeleton";
 import favoriteService from "../appwrite/favorite";
 import { fetchFeedPosts } from "../lib/posts";
 import { formatCompactNumber, getFileUrl, getHandle } from "../lib/ui";
@@ -15,33 +13,42 @@ import {
   CommentIcon,
   PlayIcon,
   ImageIcon,
+  ShieldIcon,
 } from "../components/ui/Icons";
 
+/* ─────────────────── helpers ─────────────────── */
+
 const PRESET_GRADIENTS = [
-  "from-indigo-600 to-blue-500",
-  "from-rose-500 to-orange-400",
-  "from-emerald-500 to-teal-400",
-  "from-blue-600 to-cyan-500",
-  "from-amber-500 to-rose-500",
-  "from-indigo-600 to-violet-500",
-  "from-fuchsia-600 to-rose-500",
-  "from-cyan-600 to-blue-500",
+  ["#6366f1", "#3b82f6"],
+  ["#f43f5e", "#fb923c"],
+  ["#10b981", "#14b8a6"],
+  ["#2563eb", "#06b6d4"],
+  ["#f59e0b", "#f43f5e"],
+  ["#7c3aed", "#8b5cf6"],
+  ["#db2777", "#f43f5e"],
+  ["#0891b2", "#3b82f6"],
 ];
 
 const getPostGradient = (id) =>
   PRESET_GRADIENTS[
-    Math.abs(
-      id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)
-    ) % PRESET_GRADIENTS.length
+    Math.abs(id.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) %
+      PRESET_GRADIENTS.length
   ];
 
-const FILTERS = [
+const TYPE_FILTERS    = [
   { id: "all",    label: "All"    },
   { id: "images", label: "Images" },
   { id: "audio",  label: "Audio"  },
 ];
 
-/* ── Stat block ── */
+const PRIVACY_FILTERS = [
+  { id: "all",     label: "All"     },
+  { id: "public",  label: "Public"  },
+  { id: "private", label: "Private" },
+];
+
+/* ─────────────────── sub-components ─────────────────── */
+
 function Stat({ label, value }) {
   return (
     <div className="flex-1 flex flex-col items-center gap-0.5 py-1">
@@ -59,44 +66,43 @@ function Divider() {
   return <div className="w-px self-stretch bg-white/[0.07]" />;
 }
 
+/* ─────────────────── main component ─────────────────── */
+
 export default function Profile() {
-  const currentUser = useSelector((state) => state.auth.userData);
-  const dispatch = useDispatch();
-  const { id }      = useParams();
+  const currentUser  = useSelector((s) => s.auth.userData);
+  const dispatch     = useDispatch();
+  const navigate     = useNavigate();
+  const { id }       = useParams();
   const isOwnProfile = !id || id === currentUser?.$id;
 
   const [posts,          setPosts]          = useState([]);
   const [savedCount,     setSavedCount]     = useState(0);
   const [loading,        setLoading]        = useState(true);
-  const [filter,         setFilter]         = useState("all");
+  const [typeFilter,     setTypeFilter]     = useState("all");
+  const [privacyFilter,  setPrivacyFilter]  = useState("all");
   const [isFollowing,    setIsFollowing]    = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [loadingFollow,  setLoadingFollow]  = useState(false);
 
-  /* ── follow data ── */
   useEffect(() => {
-    async function loadFollowData() {
+    async function load() {
       if (!currentUser) return;
-      const targetUserId = isOwnProfile ? currentUser.$id : id;
+      const target = isOwnProfile ? currentUser.$id : id;
       try {
         const [followers, following] = await Promise.all([
-          followService.getFollowersCount(targetUserId),
-          followService.getFollowingCount(targetUserId),
+          followService.getFollowersCount(target),
+          followService.getFollowingCount(target),
         ]);
         setFollowersCount(followers);
         setFollowingCount(following);
-        if (!isOwnProfile) {
-          setIsFollowing(await followService.isFollowing(currentUser.$id, targetUserId));
-        }
-      } catch (err) {
-        console.error("Follow data error:", err);
-      }
+        if (!isOwnProfile)
+          setIsFollowing(await followService.isFollowing(currentUser.$id, target));
+      } catch (e) { console.error(e); }
     }
-    loadFollowData();
+    load();
   }, [id, currentUser, isOwnProfile]);
 
-  /* ── follow / unfollow ── */
   async function handleFollow() {
     if (!currentUser || loadingFollow || isOwnProfile) return;
     setLoadingFollow(true);
@@ -104,59 +110,48 @@ export default function Profile() {
       if (isFollowing) {
         await followService.unfollowUser(currentUser.$id, id);
         setIsFollowing(false);
-        setFollowersCount((prev) => Math.max(0, prev - 1));
+        setFollowersCount((p) => Math.max(0, p - 1));
       } else {
         await followService.followUser(currentUser.$id, id, currentUser.name);
         setIsFollowing(true);
-        setFollowersCount((prev) => prev + 1);
+        setFollowersCount((p) => p + 1);
       }
-    } catch (err) {
-      console.error("Follow error:", err);
-    } finally {
-      setLoadingFollow(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoadingFollow(false); }
   }
 
-  /* ── profile posts ── */
   useEffect(() => {
     let active = true;
-    async function loadProfile() {
+    async function load() {
       if (!currentUser) { setLoading(false); return; }
       setLoading(true);
       try {
-        const [feedPosts, favoriteRes] = await Promise.all([
+        const [feedPosts, favRes] = await Promise.all([
           fetchFeedPosts(currentUser),
           favoriteService.getUSerAllFavorites(currentUser.$id),
         ]);
-        const targetUserId = isOwnProfile ? currentUser.$id : id;
-        const userPosts    = feedPosts.filter((p) => p.authorID === targetUserId);
+        const target    = isOwnProfile ? currentUser.$id : id;
+        const userPosts = feedPosts.filter((p) => p.authorID === target);
         if (active) {
           setPosts(userPosts);
-          setSavedCount(isOwnProfile ? (favoriteRes?.documents?.length || 0) : 0);
+          setSavedCount(isOwnProfile ? (favRes?.documents?.length || 0) : 0);
         }
-      } catch (err) {
-        console.error("Profile load error:", err);
-      } finally {
-        if (active) setLoading(false);
-      }
+      } catch (e) { console.error(e); }
+      finally { if (active) setLoading(false); }
     }
-    loadProfile();
+    load();
     return () => (active = false);
   }, [id, currentUser, isOwnProfile]);
 
-  /* ── logout ── */
   async function handleLogout() {
     try {
       await authService.logout();
       dispatch(logout());
       navigate("/login");
-    } catch (err) {
-      console.error("Logout error:", err);
-    }
+    } catch (e) { console.error(e); }
   }
 
-  /* ── guards ── */
-  if (!currentUser) {
+  if (!currentUser)
     return (
       <EmptyState
         eyebrow="Profile"
@@ -166,42 +161,46 @@ export default function Profile() {
         actionTo="/login"
       />
     );
-  }
 
-  const profileName = isOwnProfile
-    ? currentUser.name
-    : posts[0]?.authorName || `User ${id?.slice(0, 6)}`;
+  const profileName =
+    isOwnProfile
+      ? currentUser.name
+      : posts[0]?.authorName || `User ${id?.slice(0, 6)}`;
 
   const bio =
     (isOwnProfile ? currentUser.prefs?.bio : "Exploring and sharing moments.") ||
     "Sharing everyday moments.";
 
-  const visiblePosts = posts.filter((post) => {
-    if (filter === "images") return !!post.featuredImg;
-    if (filter === "audio")  return !!post.audioId;
-    return true;
-  });
-
-  /* ── initials avatar color ── */
-  const avatarColors = [
-    "bg-violet-500/20 text-violet-300",
-    "bg-sky-500/20 text-sky-300",
-    "bg-emerald-500/20 text-emerald-300",
-    "bg-amber-500/20 text-amber-300",
-    "bg-rose-500/20 text-rose-300",
+  const AV_COLORS = [
+    ["#7c3aed", "#a78bfa"],
+    ["#0284c7", "#38bdf8"],
+    ["#059669", "#34d399"],
+    ["#d97706", "#fbbf24"],
+    ["#be185d", "#f472b6"],
   ];
-  const avatarColor =
-    avatarColors[(profileName || "").charCodeAt(0) % avatarColors.length];
+  const [avBg, avFg] =
+    AV_COLORS[(profileName || "").charCodeAt(0) % AV_COLORS.length];
   const initials = (profileName || "?")
     .split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+
+  const visiblePosts = posts.filter((post) => {
+    const isPublic = post.isPublished !== false;
+    if (isOwnProfile) {
+      if (privacyFilter === "public"  && !isPublic) return false;
+      if (privacyFilter === "private" &&  isPublic) return false;
+    } else {
+      if (!isPublic) return false;
+    }
+    if (typeFilter === "images" && !post.featuredImg) return false;
+    if (typeFilter === "audio"  && !post.audioId)     return false;
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-[#0a0a0b] text-white">
 
       {/* ── PROFILE HEADER ── */}
       <div className="relative overflow-hidden border-b border-white/[0.06]">
-
-        {/* Subtle glow */}
         <div
           aria-hidden
           className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 h-56 w-56 rounded-full"
@@ -209,12 +208,11 @@ export default function Profile() {
         />
 
         <div className="relative px-5 pt-7 pb-6">
-
           {/* Avatar + name row */}
           <div className="flex items-center gap-4">
-            {/* Big initials avatar */}
             <div
-              className={`h-16 w-16 flex-shrink-0 rounded-full flex items-center justify-center text-[20px] font-extrabold ${avatarColor}`}
+              className="h-16 w-16 flex-shrink-0 rounded-full flex items-center justify-center text-[20px] font-extrabold"
+              style={{ background: `${avBg}30`, color: avFg }}
             >
               {initials}
             </div>
@@ -230,7 +228,6 @@ export default function Profile() {
               )}
             </div>
 
-            {/* Own profile actions */}
             {isOwnProfile && (
               <div className="flex-shrink-0 flex gap-2">
                 <button
@@ -248,7 +245,6 @@ export default function Profile() {
               </div>
             )}
 
-            {/* Follow button */}
             {!isOwnProfile && (
               <button
                 onClick={handleFollow}
@@ -271,11 +267,11 @@ export default function Profile() {
 
           {/* Stats strip */}
           <div className="mt-5 flex items-center rounded-2xl border border-white/[0.07] bg-white/[0.03] py-3">
-            <Stat label="Posts"     value={posts.length}    />
+            <Stat label="Posts"     value={posts.length}   />
             <Divider />
-            <Stat label="Followers" value={followersCount}  />
+            <Stat label="Followers" value={followersCount} />
             <Divider />
-            <Stat label="Following" value={followingCount}  />
+            <Stat label="Following" value={followingCount} />
             {isOwnProfile && (
               <>
                 <Divider />
@@ -288,34 +284,60 @@ export default function Profile() {
 
       {/* ── POSTS GRID ── */}
       <div>
-        {/* Grid header + filters */}
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/[0.05]">
-          <div>
-            <p className="text-[11px] uppercase tracking-widest text-white/25 mb-0.5">
-              {isOwnProfile ? "Your grid" : `${getHandle(profileName)}'s posts`}
-            </p>
-            <p className="text-[13px] text-white/40">
-              {visiblePosts.length} {visiblePosts.length === 1 ? "post" : "posts"}
-            </p>
+
+        {/* Filter header */}
+        <div className="px-5 pt-4 pb-3 border-b border-white/[0.05] space-y-2.5">
+
+          {/* Row 1: label + type filters */}
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-widest text-white/25 mb-0.5">
+                {isOwnProfile ? "Your grid" : `${getHandle(profileName)}'s posts`}
+              </p>
+              <p className="text-[13px] text-white/40">
+                {visiblePosts.length}{" "}
+                {visiblePosts.length === 1 ? "post" : "posts"}
+              </p>
+            </div>
+
+            <div className="flex gap-1.5">
+              {TYPE_FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setTypeFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200 ${
+                    typeFilter === f.id
+                      ? "bg-white text-black"
+                      : "border border-white/[0.08] bg-white/[0.04] text-white/40 hover:text-white/70 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex gap-1.5">
-            {FILTERS.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setFilter(f.id)}
-                className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200 ${
-                  filter === f.id
-                    ? "bg-white text-black"
-                    : "border border-white/[0.08] bg-white/[0.04] text-white/40 hover:text-white/70 hover:bg-white/[0.08]"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+          {/* Row 2: privacy filters — own profile only */}
+          {isOwnProfile && (
+            <div className="flex items-center justify-end gap-1.5">
+              {PRIVACY_FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setPrivacyFilter(f.id)}
+                  className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-200 ${
+                    privacyFilter === f.id
+                      ? "bg-white text-black"
+                      : "border border-white/[0.08] bg-white/[0.04] text-white/40 hover:text-white/70 hover:bg-white/[0.08]"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
+        {/* Grid */}
         {loading ? (
           <div className="grid grid-cols-3 gap-1 sm:gap-1.5 p-1.5">
             {[...Array(9)].map((_, i) => (
@@ -330,7 +352,7 @@ export default function Profile() {
           <div className="grid grid-cols-3 gap-1 sm:gap-1.5 p-1.5 animate-in fade-in duration-300">
             {visiblePosts.map((post) => {
               const imageSrc = getFileUrl(post.featuredImg);
-              const gradient = getPostGradient(post.$id);
+              const [g1, g2] = getPostGradient(post.$id);
 
               return (
                 <Link
@@ -339,28 +361,33 @@ export default function Profile() {
                   className="group relative aspect-square overflow-hidden rounded-xl bg-zinc-900 transition-transform duration-200 hover:scale-[0.98] hover:z-10"
                 >
                   {imageSrc ? (
-                    <img
-                      src={imageSrc}
-                      alt={post.title}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
+                    <>
+                      <img
+                        src={imageSrc}
+                        alt={post.title}
+                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      <div
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{
+                          background:
+                            "linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 55%)",
+                        }}
+                      />
+                    </>
                   ) : (
                     <div
-                      className={`flex h-full w-full items-center justify-center p-4 relative overflow-hidden group/textcard ${
-                        post.audioId ? `bg-gradient-to-br ${gradient}` : "bg-zinc-800"
-                      }`}
+                      className="flex h-full w-full items-center justify-center p-4 relative overflow-hidden"
+                      style={{ background: `linear-gradient(145deg, ${g1}ee, ${g2}bb)` }}
                     >
-                      {/* Subtle pattern / texture overlay (text cards only) */}
-                      {!post.audioId && (
-                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.1) 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
-                      )}
-                      
-                      {/* Darker gradient bleed from the corners (text cards only) */}
-                      {!post.audioId && (
-                        <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-30 mix-blend-soft-light`}></div>
-                      )}
-
-                      {/* BG decoration */}
+                      <div
+                        className="absolute inset-0 opacity-[0.05]"
+                        style={{
+                          backgroundImage:
+                            "radial-gradient(circle, rgba(255,255,255,0.4) 1px, transparent 1px)",
+                          backgroundSize: "16px 16px",
+                        }}
+                      />
                       <div className="absolute inset-0 flex items-center justify-center select-none">
                         {post.audioId ? (
                           <div className="flex items-center justify-center gap-1 w-full h-full px-4 opacity-[0.15] group-hover:opacity-[0.25] transition-opacity">
@@ -376,37 +403,43 @@ export default function Profile() {
                             ))}
                           </div>
                         ) : (
-                          <div className="absolute inset-0 flex items-center justify-center opacity-[0.05] group-hover:opacity-[0.1] transition-opacity">
+                          <div className="absolute inset-0 flex items-center justify-center opacity-[0.05]">
                             <span className="text-[120px] font-black text-white leading-none uppercase italic">
                               {post.title.charAt(0)}
                             </span>
                           </div>
                         )}
                       </div>
-
                       <div className="relative z-10 flex flex-col items-center">
-                         <h3 className="text-center text-[15px] sm:text-[17px] font-black text-white leading-tight line-clamp-4 tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-                           {post.title}
-                         </h3>
-                         <div className="mt-2 h-0.5 w-6 bg-white/20 rounded-full group-hover/textcard:w-10 transition-all duration-300"></div>
+                        <h3 className="text-center text-[15px] sm:text-[17px] font-black text-white leading-tight line-clamp-4 tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+                          {post.title}
+                        </h3>
+                        <div className="mt-2 h-0.5 w-6 bg-white/20 rounded-full group-hover:w-10 transition-all duration-300" />
                       </div>
                     </div>
                   )}
 
-                  {/* Media badge */}
+                  {/* private badge */}
+                  {post.isPublished === false && (
+                    <div className="absolute top-1.5 left-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-amber-500/30">
+                      <ShieldIcon className="h-2.5 w-2.5 text-amber-400" />
+                    </div>
+                  )}
+
+                  {/* media badge */}
                   {(post.audioId || post.featuredImg) && (
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                       {post.audioId
-                        ? <PlayIcon  className="h-3 w-3 text-white/70 drop-shadow" />
-                        : <ImageIcon className="h-3 w-3 text-white/70 drop-shadow" />
+                        ? <PlayIcon  className="h-2.5 w-2.5 text-white/70" />
+                        : <ImageIcon className="h-2.5 w-2.5 text-white/70" />
                       }
                     </div>
                   )}
 
-                  {/* Stats overlay */}
+                  {/* stats overlay */}
                   <div className="absolute inset-0 flex items-end justify-start gap-3 p-3 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                     <div className="flex items-center gap-1 text-white">
-                      <HeartIcon className="h-3.5 w-3.5 fill-current" />
+                      <HeartIcon   className="h-3.5 w-3.5 fill-current" />
                       <span className="text-[11px] font-bold">
                         {formatCompactNumber(post.likeCount || 0)}
                       </span>
@@ -427,7 +460,11 @@ export default function Profile() {
             <EmptyState
               eyebrow="Profile"
               title="No posts yet"
-              description={isOwnProfile ? "Create your first post to fill your grid." : "Nothing posted here yet."}
+              description={
+                isOwnProfile
+                  ? "Create your first post to fill your grid."
+                  : "Nothing posted here yet."
+              }
               actionLabel={isOwnProfile ? "Create post" : undefined}
               actionTo={isOwnProfile ? "/create" : undefined}
             />
