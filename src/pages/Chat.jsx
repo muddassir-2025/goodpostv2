@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { confirm } from "../confirmService";
 import { ID } from "appwrite";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -149,7 +150,8 @@ export default function Chat() {
   };
 
   const handleDelete = async (msgId) => {
-    if (!window.confirm("Delete this message for everyone?")) return;
+    const isConfirmed = await confirm("Delete this message for everyone?");
+    if (!isConfirmed) return;
     try {
       const actualMsg = await messageService.deleteMessage(msgId);
       setMessages(prev => prev.map(m => m.$id === msgId ? actualMsg : m));
