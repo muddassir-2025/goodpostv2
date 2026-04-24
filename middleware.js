@@ -10,12 +10,12 @@ export default async function middleware(request) {
   const response = await fetch(new URL('/', request.url));
   let html = await response.text();
 
-  // 2. Fetch the post details from Appwrite via REST (Edge compatible)
+  // 2. Fetch the post details from Appwrite via REST
   const endpoint = process.env.VITE_APPWRITE_ENDPOINT || "https://fra.cloud.appwrite.io/v1";
-  const projectId = process.env.VITE_APPWRITE_PROJECT_ID;
-  const databaseId = process.env.VITE_APPWRITE_DATABASE_ID;
-  const collectionId = process.env.VITE_APPWRITE_TABLE_ID;
-  const bucketId = process.env.VITE_APPWRITE_BUCKET_ID;
+  const projectId = process.env.VITE_APPWRITE_PROJECT_ID || "69d8318f0017a3e1596b";
+  const databaseId = process.env.VITE_APPWRITE_DATABASE_ID || "69d832fc0035a264b35b";
+  const collectionId = process.env.VITE_APPWRITE_TABLE_ID || "posts";
+  const bucketId = process.env.VITE_APPWRITE_BUCKET_ID || "69d83a2c003c2cad7941";
 
   try {
     const appwriteUrl = `${endpoint}/databases/${databaseId}/collections/${collectionId}/documents/${slug}`;
@@ -28,10 +28,12 @@ export default async function middleware(request) {
     if (appwriteRes.ok) {
       const post = await appwriteRes.json();
       
-      const title = `Post by ${post.authorName || 'GoodPost User'}`;
-      const desc = post.caption ? post.caption.slice(0, 150) + '...' : 'Check out this post on GoodPost.';
+      const title = post.title || `Post by ${post.authorName || 'GoodPost User'}`;
+      const desc = post.content ? post.content.slice(0, 150) + '...' : 'Check out this post on GoodPost.';
       
-      let image = `https://${url.host}/GoodPost.svg`;
+      // WhatsApp doesn't support SVG, so use a dynamic dark gradient image with the post title!
+      let image = `https://placehold.co/1200x630/121212/ffffff.png?text=${encodeURIComponent(title.substring(0, 30))}`;
+      
       if (post.featuredImg) {
         image = `${endpoint}/storage/buckets/${bucketId}/files/${post.featuredImg}/view?project=${projectId}`;
       }
