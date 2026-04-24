@@ -5,7 +5,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import Avatar from "../components/Avatar";
-import { ArrowLeftIcon, EditIcon, TrashIcon, CloseIcon, DotsIcon } from "../components/ui/Icons";
+import { ArrowLeftIcon, EditIcon, TrashIcon, CloseIcon, DotsIcon, SearchIcon } from "../components/ui/Icons";
 import messageService from "../appwrite/message";
 import postService from "../appwrite/post";
 import { formatRelativeTime, getHandle } from "../lib/ui";
