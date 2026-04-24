@@ -50,8 +50,17 @@ export default function Navbar() {
         messageService.getConversations(user.$id)
       ]);
       
-      const unreadChats = (convRes?.documents || [])
-        .filter(c => c.unreadCount > 0 && c.lastMessageSenderId !== user.$id).length;
+      const convDocs = convRes?.documents || [];
+      const unreadChatPromises = convDocs
+        .filter(c => c.unreadCount > 0 && c.lastMessage)
+        .map(async (c) => {
+          const msgs = await messageService.getMessages(c.$id);
+          const lastMsg = msgs.documents[msgs.documents.length - 1];
+          return lastMsg && lastMsg.senderId !== user.$id;
+        });
+
+      const results = await Promise.all(unreadChatPromises);
+      const unreadChats = results.filter(Boolean).length;
 
       setUnreadCount(notifCount + unreadChats);
     }

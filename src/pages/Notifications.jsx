@@ -45,10 +45,16 @@ export default function Notifications() {
 
         const regularNotifs = notifRes?.documents || [];
         
-        // Transform unread conversations into notification objects
-        const chatNotifs = (convRes?.documents || [])
-          .filter(c => c.unreadCount > 0 && c.lastMessage && c.lastMessageSenderId !== user.$id)
-          .map(c => {
+        // Transform unread conversations into notification objects (Filter out own messages)
+        const chatNotifsPromises = (convRes?.documents || [])
+          .filter(c => c.unreadCount > 0 && c.lastMessage)
+          .map(async (c) => {
+            // Fetch the last message to see who sent it
+            const msgs = await messageService.getMessages(c.$id);
+            const lastMsg = msgs.documents[msgs.documents.length - 1];
+            
+            if (!lastMsg || lastMsg.senderId === user.$id) return null;
+
             const otherId = c.members.find(id => id !== user.$id) || "unknown";
             return {
               $id: `chat_${c.$id}`,
@@ -61,6 +67,9 @@ export default function Notifications() {
               isRead: false
             };
           });
+
+        const chatNotifsResolved = await Promise.all(chatNotifsPromises);
+        const chatNotifs = chatNotifsResolved.filter(n => n !== null);
 
         const merged = [...regularNotifs, ...chatNotifs].sort((a, b) => 
           new Date(b.$createdAt) - new Date(a.$createdAt)
