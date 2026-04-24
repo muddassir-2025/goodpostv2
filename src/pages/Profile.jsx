@@ -347,7 +347,7 @@ export default function Profile() {
                   ) : (
                     <div
                       className={`flex h-full w-full items-center justify-center p-4 relative overflow-hidden group/textcard ${
-                        post.audioId ? `bg-gradient-to-br ${gradient}` : "bg-zinc-900"
+                        post.audioId ? `bg-gradient-to-br ${gradient}` : "bg-zinc-800"
                       }`}
                     >
                       {/* Subtle pattern / texture overlay (text cards only) */}
