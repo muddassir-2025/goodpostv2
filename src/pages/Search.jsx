@@ -15,7 +15,8 @@ import {
   AudioIcon,
   PlayIcon,
   UserIcon,
-  DotsIcon
+  DotsIcon,
+  ShieldIcon
 } from "../components/ui/Icons";
 
 import postService from "../appwrite/post";
@@ -36,26 +37,26 @@ const CATEGORIES = [
 export default function Search() {
   const user = useSelector((state) => state.auth.userData);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const initialQuery = searchParams.get("q") || "";
+  
+  // 🔗 URL PERSISTENCE
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeCategory = searchParams.get("cat") || "for-you";
+  const isFullList = searchParams.get("view") === "full";
+  const urlQuery = searchParams.get("q") || "";
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState(initialQuery);
-  const [activeCategory, setActiveCategory] = useState("for-you");
+  const [query, setQuery] = useState(urlQuery);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [isFullList, setIsFullList] = useState(false);
-  const [menuOpenId, setMenuOpenId] = useState(null); // Track which menu is open
+  const [menuOpenId, setMenuOpenId] = useState(null);
   
   const debouncedQuery = useDebounce(query, 300);
   const dropdownRef = useRef(null);
 
+  // Sync internal query with URL if URL changes (e.g. back button)
   useEffect(() => {
-    if (initialQuery) {
-      setQuery(initialQuery);
-      setIsFullList(true);
-    }
-  }, [initialQuery]);
+    setQuery(urlQuery);
+  }, [urlQuery]);
 
   useEffect(() => {
     let active = true;
@@ -107,10 +108,20 @@ export default function Search() {
     return Object.values(topicMap).sort((a, b) => b.count - a.count);
   }, [posts]);
 
+  const updateUrl = (params) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      Object.entries(params).forEach(([k, v]) => {
+        if (v === null) next.delete(k);
+        else next.set(k, v);
+      });
+      return next;
+    }, { replace: true });
+  };
+
   const handleTabChange = (id) => {
-    setActiveCategory(id);
     setQuery("");
-    setIsFullList(false);
+    updateUrl({ cat: id, view: null, q: null });
   };
 
   const handlePostClick = (post) => {
@@ -118,38 +129,24 @@ export default function Search() {
   };
 
   const handleReport = async (post) => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
+    if (!user) { navigate("/login"); return; }
     const ok = await window.confirm("Report this post?");
     if (!ok) return;
-
     try {
       const res = await postService.reportPost(post.$id, user.$id);
       if (res.status === "deleted") {
         setPosts(prev => prev.filter(p => p.$id !== post.$id));
-        alert("Post removed.");
-      } else {
-        alert("Reported.");
       }
-    } catch {
-      alert("Report failed.");
-    }
+    } catch (e) {}
   };
 
   const handleDelete = async (post) => {
     const ok = await window.confirm("Delete this post?");
     if (!ok) return;
-
     try {
-      if (post.featuredImg) await postService.deleteFile(post.featuredImg);
-      if (post.audioId) await postService.deleteFile(post.audioId);
       await postService.deletePost(post.$id);
       setPosts(prev => prev.filter(p => p.$id !== post.$id));
-    } catch {
-      alert("Delete failed.");
-    }
+    } catch (e) {}
   };
 
   const renderPostItem = (post, index = 0, compact = false) => (
@@ -197,33 +194,13 @@ export default function Search() {
               </button>
 
               {menuOpenId === post.$id && (
-                <div className="absolute bottom-full right-0 mb-2 z-50 w-36 rounded-xl border border-white/10 bg-zinc-950 p-1 shadow-2xl shadow-black">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handlePostClick(post); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white hover:bg-white/5"
-                  >
-                    View
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); handleReport(post); }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-amber-400 hover:bg-amber-400/10"
-                  >
-                    Report
-                  </button>
+                <div className="absolute bottom-full right-0 mb-2 z-50 w-36 rounded-xl border border-white/10 bg-zinc-950 p-1 shadow-2xl">
+                  <button onClick={(e) => { e.stopPropagation(); handlePostClick(post); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white hover:bg-white/5">View</button>
+                  <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); handleReport(post); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-amber-400 hover:bg-amber-400/10">Report</button>
                   {((user?.$id === post.authorID) || user?.isAdmin) && (
                     <>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigate(`/edit/${post.$id}`); }}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white hover:bg-white/5"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); handleDelete(post); }}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10"
-                      >
-                        Delete
-                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); navigate(`/edit/${post.$id}`); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white hover:bg-white/5">Edit</button>
+                      <button onClick={(e) => { e.stopPropagation(); setMenuOpenId(null); handleDelete(post); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10">Delete</button>
                     </>
                   )}
                 </div>
@@ -234,10 +211,7 @@ export default function Search() {
 
         {post.featuredImg && (
           <div className={`flex-shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-zinc-900 ${compact ? 'h-16 w-16' : 'h-24 w-24'}`}>
-            <img 
-              src={getFileUrl(post.featuredImg)} 
-              className="h-full w-full object-cover transition duration-500 group-hover:scale-110" 
-            />
+            <img src={getFileUrl(post.featuredImg)} className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
           </div>
         )}
       </div>
@@ -246,7 +220,6 @@ export default function Search() {
 
   return (
     <div className="min-h-screen bg-black text-white selection:bg-blue-500/30">
-      {/* 🔍 TOP NAV */}
       <header className="sticky top-16 z-40 bg-black/80 backdrop-blur-md md:top-20">
         <div className="flex items-center gap-4 px-4 py-3">
           <div className="relative flex-1" ref={dropdownRef}>
@@ -256,8 +229,9 @@ export default function Search() {
                 type="text"
                 value={query}
                 onChange={(e) => {
-                  setQuery(e.target.value);
-                  if (e.target.value) setIsFullList(true);
+                  const val = e.target.value;
+                  setQuery(val);
+                  updateUrl({ q: val || null, view: val ? "full" : null });
                 }}
                 placeholder="Search"
                 className="w-full bg-transparent text-[15px] outline-none"
@@ -266,18 +240,17 @@ export default function Search() {
           </div>
         </div>
 
-        {/* 📑 TABS */}
         <div className="hide-scrollbar flex overflow-x-auto border-b border-white/10">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
               onClick={() => handleTabChange(cat.id)}
               className={`relative min-w-[100px] py-4 text-sm font-bold transition whitespace-nowrap px-4 ${
-                activeCategory === cat.id && !query ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                activeCategory === cat.id && !debouncedQuery ? "text-white" : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
               {cat.label}
-              {activeCategory === cat.id && !query && (
+              {activeCategory === cat.id && !debouncedQuery && (
                 <div className="absolute bottom-0 left-1/2 h-1 w-full -translate-x-1/2 rounded-full bg-blue-500" />
               )}
             </button>
@@ -285,54 +258,32 @@ export default function Search() {
         </div>
       </header>
 
-      <div className="">
+      <div>
         {loading ? (
           <div className="p-10 text-center"><PostSkeleton count={5} /></div>
         ) : (
           <>
-            {/* 🎯 DISCOVERY VIEW */}
             {!isFullList && !debouncedQuery && activeCategory !== "for-you" && activeCategory !== "trending" && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="p-5">
-                   <h2 className="text-xl font-extrabold text-white">Trending in {activeCategory}</h2>
-                </div>
-                
+                <div className="p-5"><h2 className="text-xl font-extrabold text-white">Trending in {activeCategory}</h2></div>
                 {results.length > 0 ? (
                   <div className="divide-y divide-white/5">
-                    {/* The "Headliner" - First Post is bigger */}
                     {renderPostItem(results[0], 0, false)}
-                    
-                    {/* The rest are compact list items */}
                     {results.slice(1, 5).map((post, idx) => renderPostItem(post, idx + 1, true))}
-                    
-                    <button 
-                      onClick={() => setIsFullList(true)}
-                      className="group flex w-full items-center justify-between p-5 text-sm font-medium text-blue-500 hover:bg-white/5 transition"
-                    >
-                      Show more
-                      <span className="opacity-0 transition group-hover:opacity-100 group-hover:translate-x-1">→</span>
+                    <button onClick={() => updateUrl({ view: "full" })} className="group flex w-full items-center justify-between p-5 text-sm font-medium text-blue-500 hover:bg-white/5 transition">
+                      Show more <span className="opacity-0 transition group-hover:opacity-100 group-hover:translate-x-1">→</span>
                     </button>
                   </div>
                 ) : (
-                  <div className="p-10 text-center">
-                    <EmptyState title={`No posts in ${activeCategory}`} description="Be the first to share!" />
-                  </div>
+                  <div className="p-10 text-center"><EmptyState title={`No posts in ${activeCategory}`} description="Be the first to share!" /></div>
                 )}
               </div>
             )}
 
-            {/* 📈 TRENDING TAB VIEW */}
             {!isFullList && !debouncedQuery && activeCategory === "trending" && (
               <div className="divide-y divide-white/10">
                 {trendingTopics.map(topic => (
-                   <button
-                    key={topic.name}
-                    onClick={() => {
-                      setActiveCategory(topic.name);
-                      setIsFullList(true);
-                    }}
-                    className="flex w-full items-start justify-between p-5 text-left transition hover:bg-white/[0.03]"
-                  >
+                   <button key={topic.name} onClick={() => handleTabChange(topic.name)} className="flex w-full items-start justify-between p-5 text-left transition hover:bg-white/[0.03]">
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] text-zinc-500">Trending</p>
                       <h2 className="mt-1 text-[16px] font-extrabold text-white">#{topic.name}</h2>
@@ -344,13 +295,10 @@ export default function Search() {
               </div>
             )}
 
-            {/* 🏁 FULL LIST / FOR YOU VIEW */}
             {(isFullList || debouncedQuery || activeCategory === "for-you") && (
               <div className="divide-y divide-white/10 animate-in fade-in duration-500">
                 {results.length > 0 ? results.map((p, idx) => renderPostItem(p, idx, false)) : (
-                  <div className="p-10 text-center">
-                    <EmptyState title="No results found" description="Try another category" />
-                  </div>
+                  <div className="p-10 text-center"><EmptyState title="No results found" description="Try another category" /></div>
                 )}
               </div>
             )}
