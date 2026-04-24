@@ -237,6 +237,48 @@ class MessageService {
       }
     );
   }
+
+  // ✅ Clear chat (Delete all messages in a conversation)
+  async clearChat(conversationId) {
+    try {
+      const messages = await this.getMessages(conversationId);
+      const deletePromises = (messages?.documents || []).map((msg) =>
+        this.databases.deleteDocument(this.databaseId, this.messagesId, msg.$id)
+      );
+      await Promise.all(deletePromises);
+      
+      // Update conversation last message
+      await this.databases.updateDocument(
+        this.databaseId,
+        this.conversationsId,
+        conversationId,
+        {
+          lastMessage: "Chat cleared",
+          unreadCount: 0,
+        }
+      );
+    } catch (error) {
+      console.log("clearChat error:", error);
+      throw error;
+    }
+  }
+
+  // ✅ Delete Conversation
+  async deleteConversation(conversationId) {
+    try {
+      // First clear all messages
+      await this.clearChat(conversationId);
+      // Then delete conversation document
+      await this.databases.deleteDocument(
+        this.databaseId,
+        this.conversationsId,
+        conversationId
+      );
+    } catch (error) {
+      console.log("deleteConversation error:", error);
+      throw error;
+    }
+  }
 }
 
 const messageService = new MessageService();

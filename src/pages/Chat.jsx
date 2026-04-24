@@ -24,6 +24,9 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [menuOpenId, setMenuOpenId] = useState(null);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState("");
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -154,8 +157,8 @@ export default function Chat() {
     const isConfirmed = await confirm("Delete this message for everyone?");
     if (!isConfirmed) return;
     try {
-      const actualMsg = await messageService.deleteMessage(msgId);
-      setMessages(prev => prev.map(m => m.$id === msgId ? actualMsg : m));
+      await messageService.deleteMessage(msgId);
+      // Realtime will handle the update
       if (editingMessageId === msgId) {
         setEditingMessageId(null);
         setNewMessage("");
@@ -164,6 +167,39 @@ export default function Chat() {
       console.error("Failed to delete", error);
     }
   };
+ 
+  const handleClearChat = async () => {
+    const isConfirmed = await confirm("Are you sure you want to clear all messages in this chat? This cannot be undone.");
+    if (!isConfirmed) return;
+    try {
+      setLoading(true);
+      await messageService.clearChat(conversationId);
+      setMessages([]);
+      setHeaderMenuOpen(false);
+    } catch (error) {
+      console.error("Failed to clear chat", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+ 
+  const handleDeleteConversation = async () => {
+    const isConfirmed = await confirm("Delete this entire conversation? This will remove it for both parties.");
+    if (!isConfirmed) return;
+    try {
+      setLoading(true);
+      await messageService.deleteConversation(conversationId);
+      navigate("/messages");
+    } catch (error) {
+      console.error("Failed to delete conversation", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+ 
+  const filteredMessages = messages.filter(m => 
+    m.text.toLowerCase().includes(chatSearchQuery.toLowerCase())
+  );
 
   if (!user) return null;
 
@@ -189,15 +225,86 @@ export default function Chat() {
             <div className="w-24 h-4 rounded-full bg-white/10" />
           </div>
         ) : otherUser ? (
-          <Link to={`/profile/${otherUser.id}`} className="flex items-center gap-3 cursor-pointer group">
-            <Avatar name={otherUser.name} size="md" />
-            <div>
-              <p className="font-extrabold text-white group-hover:text-blue-400 transition-colors leading-tight">{otherUser.name}</p>
-              <p className="text-[11px] text-white/30 font-medium">{getHandle(otherUser.name)}</p>
+          <div className="flex-1 flex items-center justify-between">
+            <Link to={`/profile/${otherUser.id}`} className="flex items-center gap-3 cursor-pointer group">
+              <Avatar name={otherUser.name} size="md" />
+              <div>
+                <p className="font-extrabold text-white group-hover:text-blue-400 transition-colors leading-tight">{otherUser.name}</p>
+                <p className="text-[11px] text-white/30 font-medium">{getHandle(otherUser.name)}</p>
+              </div>
+            </Link>
+            
+            <div className="flex items-center gap-1">
+              {/* Minimalist Search Toggle */}
+              <button 
+                onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) setChatSearchQuery(""); }}
+                className={`p-2 rounded-full transition-colors ${searchOpen ? "bg-blue-600 text-white" : "text-white/40 hover:bg-white/10 hover:text-white"}`}
+              >
+                <SearchIcon className="h-4 w-4" />
+              </button>
+ 
+              {/* Options Menu */}
+              <div className="relative">
+                <button 
+                  onClick={() => setHeaderMenuOpen(!headerMenuOpen)}
+                  className={`p-2 rounded-full transition-colors ${headerMenuOpen ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/10 hover:text-white"}`}
+                >
+                  <DotsIcon className="h-4 w-4 rotate-90" />
+                </button>
+ 
+                <AnimatePresence>
+                  {headerMenuOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 top-full mt-2 w-48 z-50 rounded-2xl border border-white/[0.08] bg-zinc-900/90 backdrop-blur-xl p-1.5 shadow-2xl overflow-hidden"
+                    >
+                      <button 
+                        onClick={handleClearChat}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-bold text-white/70 hover:bg-white/10 hover:text-white transition"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                        Clear Chat
+                      </button>
+                      <button 
+                        onClick={handleDeleteConversation}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-bold text-rose-500 hover:bg-rose-500/10 transition"
+                      >
+                        <CloseIcon className="h-4 w-4" />
+                        Delete Chat
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-          </Link>
+          </div>
         ) : null}
       </header>
+ 
+      {/* Search Bar Overlay */}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="relative z-10 border-b border-white/[0.06] bg-black/20 overflow-hidden"
+          >
+            <div className="p-3">
+              <input 
+                autoFocus
+                type="text"
+                value={chatSearchQuery}
+                onChange={(e) => setChatSearchQuery(e.target.value)}
+                placeholder="Search messages..."
+                className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-white/20"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
  
       {/* MESSAGES LIST */}
       <div className="relative z-10 flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
@@ -208,8 +315,8 @@ export default function Chat() {
         ) : (
           <div className="flex flex-col gap-3">
             <AnimatePresence initial={false}>
-              {messages.length > 0 ? (
-                messages.map((msg, index) => {
+              {filteredMessages.length > 0 ? (
+                filteredMessages.map((msg, index) => {
                   const isMe = msg.senderId === user.$id;
                   const showAvatar = !isMe && (index === 0 || messages[index - 1].senderId !== msg.senderId);
                   const isDeleted = msg.text === "🚫 This message was deleted";
