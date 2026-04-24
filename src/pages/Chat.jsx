@@ -172,42 +172,38 @@ export default function Chat() {
     }
   };
  
-  const handleClearChat = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleClearChat = () => {
     setHeaderMenuOpen(false);
-    
-    const isConfirmed = await confirm("Are you sure you want to clear all messages in this chat? This cannot be undone.");
-    if (!isConfirmed) return;
- 
-    try {
-      setLoading(true);
-      await messageService.clearChat(conversationId);
-      setMessages([]);
-    } catch (error) {
-      console.error("Failed to clear chat", error);
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(async () => {
+      const isConfirmed = await confirm("Are you sure you want to clear all messages in this chat? This cannot be undone.");
+      if (!isConfirmed) return;
+      try {
+        setLoading(true);
+        await messageService.clearChat(conversationId);
+        setMessages([]);
+      } catch (error) {
+        console.error("Failed to clear chat", error);
+      } finally {
+        setLoading(false);
+      }
+    }, 150);
   };
- 
-  const handleDeleteConversation = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+
+  const handleDeleteConversation = () => {
     setHeaderMenuOpen(false);
- 
-    const isConfirmed = await confirm("Delete this entire conversation? This will remove it for both parties.");
-    if (!isConfirmed) return;
- 
-    try {
-      setLoading(true);
-      await messageService.deleteConversation(conversationId);
-      navigate("/messages");
-    } catch (error) {
-      console.error("Failed to delete conversation", error);
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(async () => {
+      const isConfirmed = await confirm("Delete this entire conversation? This will remove it for both parties.");
+      if (!isConfirmed) return;
+      try {
+        setLoading(true);
+        await messageService.deleteConversation(conversationId);
+        navigate("/messages");
+      } catch (error) {
+        console.error("Failed to delete conversation", error);
+      } finally {
+        setLoading(false);
+      }
+    }, 150);
   };
  
   const filteredMessages = messages.filter(m => 
