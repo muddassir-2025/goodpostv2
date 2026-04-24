@@ -36,16 +36,35 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    authService.getCurrentUser().then(async (user) => {
-      if (user) {
-        const isAdmin = await authService.checkIsAdmin();
-        dispatch(login({ userData: user, isAdmin }));
-      } else {
-        dispatch(logout());
-      }
+    async function initAuth() {
+      // ✅ Intercept OAuth Tokens to bypass 3rd-party cookie blocking
+      const urlParams = new URLSearchParams(window.location.search);
+      const userId = urlParams.get("userId");
+      const secret = urlParams.get("secret");
 
-      setLoading(false);
-    });
+      try {
+        if (userId && secret) {
+          await authService.completeOAuth(userId, secret);
+          // Clean up the URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        const user = await authService.getCurrentUser();
+        if (user) {
+          const isAdmin = await authService.checkIsAdmin();
+          dispatch(login({ userData: user, isAdmin }));
+        } else {
+          dispatch(logout());
+        }
+      } catch (err) {
+        console.error("Auth init error:", err);
+        dispatch(logout());
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    initAuth();
   }, [dispatch]);
 
   if (loading) {

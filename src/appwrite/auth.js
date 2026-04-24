@@ -1,4 +1,4 @@
-import { Client, ID, Account, Teams } from "appwrite";
+import { Client, ID, Account, Teams, OAuthProvider } from "appwrite";
 
 class Authservice {
   client = new Client();
@@ -70,16 +70,27 @@ class Authservice {
     }
   }
 
-  // 🌐 Google Auth
+  // 🌐 Google Auth (Using Token Flow for robust mobile/local testing)
   async googleAuth() {
     try {
-      this.account.createOAuth2Session(
-        "google",
+      this.account.createOAuth2Token(
+        OAuthProvider.Google,
         `${window.location.origin}/`,
-        `${window.location.origin}/login`
+        `${window.location.origin}/login?error=oauth_failed`
       );
     } catch (error) {
       console.error("google login error:", error);
+      throw error;
+    }
+  }
+
+  // 🔄 Complete OAuth Flow (called when redirect returns with tokens)
+  async completeOAuth(userId, secret) {
+    try {
+      const session = await this.account.createSession(userId, secret);
+      return session;
+    } catch (error) {
+      console.error("OAuth completion error:", error);
       throw error;
     }
   }

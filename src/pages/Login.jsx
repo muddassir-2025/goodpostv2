@@ -19,6 +19,12 @@ export default function Login() {
   const destination = location.state?.from || "/";
 
   useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("error") === "oauth_failed") {
+      setError("Google Login failed. This email may already be registered with a password.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     if (authStatus) {
       navigate(destination, { replace: true });
     }
