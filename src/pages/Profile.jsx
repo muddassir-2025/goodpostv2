@@ -8,6 +8,28 @@ import favoriteService from "../appwrite/favorite";
 import { fetchFeedPosts } from "../lib/posts";
 import { formatCompactNumber, getFileUrl, getHandle } from "../lib/ui";
 import followService from "../appwrite/follow";
+import { 
+  HeartIcon, 
+  CommentIcon, 
+  PlayIcon, 
+  ImageIcon 
+} from "../components/ui/Icons";
+
+const PRESET_GRADIENTS = [
+  "from-indigo-600 to-blue-500",
+  "from-rose-500 to-orange-400",
+  "from-emerald-500 to-teal-400",
+  "from-blue-600 to-cyan-500",
+  "from-amber-500 to-rose-500",
+  "from-indigo-600 to-violet-500",
+  "from-fuchsia-600 to-rose-500",
+  "from-cyan-600 to-blue-500",
+];
+
+const getPostGradient = (id) => {
+  const index = Math.abs(id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0)) % PRESET_GRADIENTS.length;
+  return PRESET_GRADIENTS[index];
+};
 
 export default function Profile() {
   const currentUser = useSelector((state) => state.auth.userData);
@@ -269,44 +291,56 @@ export default function Profile() {
         </div>
 
         {loading ? (
-          <PostSkeleton count={2} />
+          <PostSkeleton count={6} />
         ) : visiblePosts.length ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-1 sm:gap-2">
             {visiblePosts.map((post) => {
               const imageSrc = getFileUrl(post.featuredImg);
+              const gradient = getPostGradient(post.$id);
 
               return (
                 <Link
                   key={post.$id}
                   to={`/post/${post.slug}`}
-                  className="group rounded-[24px] overflow-hidden border border-white/10 cursor-pointer"
+                  className="group relative aspect-square overflow-hidden bg-zinc-900"
                 >
-                  <div className="aspect-square relative overflow-hidden">
-                    {imageSrc ? (
-                      <>
-                        <img
-                          src={imageSrc}
-                          alt={post.title}
-                          className="w-full h-full object-cover transition duration-500 group-hover:scale-105"
-                        />
-
-                        <div className="absolute inset-0 flex items-end p-3
-                          bg-[linear-gradient(to_top,rgba(0,0,0,0.75),rgba(0,0,0,0.15),transparent)]
-                        ">
-                          <p className="text-white text-sm font-semibold line-clamp-2">
-                            {post.title}
-                          </p>
+                  {imageSrc ? (
+                    <img
+                      src={imageSrc}
+                      alt={post.title}
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className={`flex h-full w-full flex-col justify-center p-4 bg-gradient-to-br ${gradient}`}>
+                       {post.audioId && (
+                        <div className="mb-2">
+                          <PlayIcon className="h-5 w-5 text-white/80" />
                         </div>
-                      </>
-                    ) : (
-                      <div className="flex h-full items-end p-3
-                        bg-[radial-gradient(circle_at_top,_rgba(255,115,0,0.25),_transparent_50%),linear-gradient(to_top,rgba(0,0,0,0.7),rgba(0,0,0,0.1))]
-                        backdrop-blur-md
-                      ">
-                        <p className="text-white text-sm font-semibold">
-                          {post.title}
-                        </p>
-                      </div>
+                      )}
+                      <h3 className="font-display text-lg sm:text-xl md:text-2xl font-extrabold text-white leading-tight line-clamp-3">
+                        {post.title}
+                      </h3>
+                      <p className="mt-2 text-[10px] sm:text-xs text-white/70 font-medium uppercase tracking-widest">
+                        {post.audioId ? "Audio Drop" : "Story"}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* HOVER OVERLAY (INSTAGRAM STYLE) */}
+                  <div className="absolute inset-0 flex items-center justify-center gap-4 bg-black/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <div className="flex items-center gap-1.5 text-white">
+                      <HeartIcon className="h-5 w-5 fill-current" />
+                      <span className="text-sm font-bold">{formatCompactNumber(post.likeCount || 0)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-white">
+                      <CommentIcon className="h-5 w-5 fill-current" />
+                      <span className="text-sm font-bold">{formatCompactNumber(post.commentCount || 0)}</span>
+                    </div>
+                    {post.audioId && (
+                      <PlayIcon className="absolute top-3 right-3 h-4 w-4 text-white shadow-xl" />
+                    )}
+                    {post.featuredImg && (
+                      <ImageIcon className="absolute top-3 right-3 h-4 w-4 text-white shadow-xl" />
                     )}
                   </div>
                 </Link>
