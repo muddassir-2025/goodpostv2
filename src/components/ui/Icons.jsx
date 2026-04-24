@@ -254,6 +254,45 @@ export function PlayIcon({ className = "" }) {
   );
 }
 
+export function PauseIcon({ className = "" }) {
+  return (
+    <svg {...svgProps(className)} fill="currentColor" stroke="none">
+      <rect x="6" y="4" width="4" height="16" />
+      <rect x="14" y="4" width="4" height="16" />
+    </svg>
+  );
+}
+
+export function VolumeIcon({ className = "" }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M11 5L6 9H2v6h4l5 4V5z" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </svg>
+  );
+}
+
+export function VolumeMutedIcon({ className = "" }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M11 5L6 9H2v6h4l5 4V5z" />
+      <line x1="23" y1="9" x2="17" y2="15" />
+      <line x1="17" y1="9" x2="23" y2="15" />
+    </svg>
+  );
+}
+
+export function DownloadIcon({ className = "" }) {
+  return (
+    <svg {...svgProps(className)}>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
 export function XIcon({ className = "" }) {
   return (
     <svg {...svgProps(className)}>

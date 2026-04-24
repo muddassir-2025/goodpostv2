@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Avatar from "../components/Avatar";
+import AudioPlayer from "../components/AudioPlayer";
 import CommentSection from "../components/CommentSection";
 import EmptyState from "../components/EmptyState";
 import FavoriteButton from "../components/FavoriteButton";
@@ -42,6 +43,8 @@ export default function SinglePost() {
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const audioPlayerRef = useRef(null);
+  const [activeSeek, setActiveSeek] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -139,6 +142,24 @@ export default function SinglePost() {
   const isOwner = (user?.$id === post.authorID) || isAdmin;
   const imageSrc = getFileUrl(post.featuredImg);
   const audioSrc = getFileUrl(post.audioId);
+
+  const handleImageClick = (e) => {
+    if (!audioSrc) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+
+    if (x < width * 0.35) {
+      audioPlayerRef.current?.skipBackward();
+      setActiveSeek("left");
+      setTimeout(() => setActiveSeek(null), 400);
+    } else if (x > width * 0.65) {
+      audioPlayerRef.current?.skipForward();
+      setActiveSeek("right");
+      setTimeout(() => setActiveSeek(null), 400);
+    }
+  };
 
   async function handleLikeToggle() {
     if (!user) {
@@ -416,20 +437,43 @@ export default function SinglePost() {
           </div>
         </div>
 
-        {imageSrc ? (
-          <img
-            src={imageSrc}
-            alt={post.title}
-            className="w-full max-h-[450px] object-contain bg-zinc-900"
-          />
-        ) : (
-          <div className="flex aspect-[4/5] items-end bg-[radial-gradient(circle_at_top,_rgba(255,115,0,0.28),_transparent_45%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-6">
-            <div>
-              <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">Feature</p>
-              <h1 className="font-display mt-3 text-4xl text-white">{post.title}</h1>
+        <div 
+          onClick={handleImageClick}
+          className="relative block w-full overflow-hidden bg-black/50 cursor-pointer"
+        >
+          {imageSrc ? (
+            <img
+              src={imageSrc}
+              alt={post.title}
+              className="w-full max-h-[450px] object-contain bg-zinc-900"
+            />
+          ) : (
+            <div className="flex aspect-[4/5] items-end bg-[radial-gradient(circle_at_top,_rgba(255,115,0,0.28),_transparent_45%),linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))] p-6">
+              <div>
+                <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">Feature</p>
+                <h1 className="font-display mt-3 text-4xl text-white">{post.title}</h1>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Side Overlay Indicators */}
+          {audioSrc && (
+            <>
+              <div className={`absolute inset-y-0 left-0 w-[35%] flex items-center justify-center bg-white/5 transition-opacity duration-300 ${activeSeek === 'left' ? 'opacity-100' : 'opacity-0'}`}>
+                <div className="flex flex-col items-center">
+                  <span className="text-white text-4xl font-black">«</span>
+                  <span className="text-white/60 text-[10px] font-bold uppercase tracking-widest">-5</span>
+                </div>
+              </div>
+              <div className={`absolute inset-y-0 right-0 w-[35%] flex items-center justify-center bg-white/5 transition-opacity duration-300 ${activeSeek === 'right' ? 'opacity-100' : 'opacity-0'}`}>
+                <div className="flex flex-col items-center">
+                  <span className="text-white text-4xl font-black">»</span>
+                  <span className="text-white/60 text-[10px] font-bold uppercase tracking-widest">5</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="p-4 sm:p-5">
           <div className="flex items-center gap-2">
@@ -463,10 +507,8 @@ export default function SinglePost() {
           </div>
 
           {audioSrc ? (
-            <div className="mt-5 rounded-[26px] border border-white/8 bg-black/40 p-3">
-              <div className="rounded-full bg-zinc-100 p-1">
-                <audio controls className="w-full" src={audioSrc} />
-              </div>
+            <div className="mt-5">
+              <AudioPlayer ref={audioPlayerRef} src={audioSrc} title={post.title} />
             </div>
           ) : null}
         </div>

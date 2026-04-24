@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import Avatar from "./Avatar";
 import FavoriteButton from "./FavoriteButton";
+import AudioPlayer from "./AudioPlayer";
 
 import { confirm } from "../confirmService";
 
@@ -47,8 +48,33 @@ export default function PostCard({
     post.content?.length > 150 ? `${post.content.slice(0, 150).trim()}...` : post.content;
 
   const openPost = () => navigate(`/post/${post.slug}`);
-
   const openProfile = () => navigate(`/profile/${post.authorID}`);
+  
+  const audioPlayerRef = useRef(null);
+  const [activeSeek, setActiveSeek] = useState(null); // 'left' | 'right' | null
+
+  const handleImageClick = (e) => {
+    if (!audioSrc) {
+      openPost();
+      return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+
+    if (x < width * 0.35) {
+      audioPlayerRef.current?.skipBackward();
+      setActiveSeek("left");
+      setTimeout(() => setActiveSeek(null), 400);
+    } else if (x > width * 0.65) {
+      audioPlayerRef.current?.skipForward();
+      setActiveSeek("right");
+      setTimeout(() => setActiveSeek(null), 400);
+    } else {
+      openPost();
+    }
+  };
 
   async function handleShare() {
     const shareUrl = `${window.location.origin}/post/${post.slug}`;
@@ -159,10 +185,9 @@ export default function PostCard({
       </div>
 
       {(imageSrc || audioSrc) ? (
-        <button
-          type="button"
-          onClick={openPost}
-          className="block w-full overflow-hidden rounded-[26px] bg-black/50 cursor-pointer"
+        <div
+          onClick={handleImageClick}
+          className="relative block w-full overflow-hidden rounded-[26px] bg-black/50 cursor-pointer"
         >
           {imageSrc ? (
             <img
@@ -180,14 +205,30 @@ export default function PostCard({
               </div>
             </div>
           )}
-        </button>
+
+          {/* Side Overlay Indicators */}
+          {audioSrc && (
+            <>
+              <div className={`absolute inset-y-0 left-0 w-[35%] flex items-center justify-center bg-white/5 transition-opacity duration-300 ${activeSeek === 'left' ? 'opacity-100' : 'opacity-0'}`}>
+                <div className="flex flex-col items-center">
+                  <span className="text-white text-4xl font-black">«</span>
+                  <span className="text-white/60 text-[10px] font-bold uppercase tracking-widest">-5</span>
+                </div>
+              </div>
+              <div className={`absolute inset-y-0 right-0 w-[35%] flex items-center justify-center bg-white/5 transition-opacity duration-300 ${activeSeek === 'right' ? 'opacity-100' : 'opacity-0'}`}>
+                <div className="flex flex-col items-center">
+                  <span className="text-white text-4xl font-black">»</span>
+                  <span className="text-white/60 text-[10px] font-bold uppercase tracking-widest">5</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       ) : null}
 
       {audioSrc ? (
-        <div className="mt-3 rounded-2xl border border-white/8 bg-black/40 p-3">
-          <div className="rounded-full bg-zinc-100 p-1">
-            <audio controls className="w-full" src={audioSrc} />
-          </div>
+        <div className="mt-3">
+          <AudioPlayer ref={audioPlayerRef} src={audioSrc} title={post.title} />
         </div>
       ) : null}
 
