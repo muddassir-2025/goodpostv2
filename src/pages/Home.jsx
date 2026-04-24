@@ -91,7 +91,7 @@ export default function Home() {
 
   const searchFiltered = filterPosts(posts, deferredSearch);
   const feedFiltered = filter === "following" 
-    ? searchFiltered.filter((p) => allowedUsers.has(p.authorID))
+    ? searchFiltered.filter((p) => allowedUsers.has(p.authorID) && p.authorID !== user?.$id)
     : searchFiltered;
   const visiblePosts = sortPosts(feedFiltered, filter === "following" ? "latest" : filter);
 
