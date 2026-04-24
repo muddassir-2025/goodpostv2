@@ -4,6 +4,11 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      '/moderate-image': 'http://localhost:3000'
+    }
+  },
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {
