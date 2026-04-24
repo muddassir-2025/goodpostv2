@@ -159,6 +159,31 @@ export default function Feed() {
     }
   }
 
+  async function handleReport(postId) {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    const ok = await window.confirm("Report this post for inappropriate content? If 5 users report it, it will be automatically removed.");
+    if (!ok) return;
+
+    try {
+      const res = await postService.reportPost(postId, user.$id);
+      
+      if (res.status === "deleted") {
+        setPosts(prev => prev.filter(p => p.$id !== postId));
+        alert("Post removed after multiple reports.");
+      } else if (res.status === "already_reported") {
+        alert("You have already reported this post.");
+      } else {
+        alert("Report submitted successfully.");
+      }
+    } catch {
+      setError("Report failed. Please try again.");
+    }
+  }
+
   return (
     <div className="space-y-5">
       <section className="rounded-[32px] border border-white/10 bg-[#121212]/90 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.34)]">
@@ -216,6 +241,7 @@ export default function Feed() {
                 onToggleFavorite={handleFavoriteToggle}
                 onDelete={handleDelete}
                 onEdit={(postId) => navigate(`/edit/${postId}`)}
+                onReport={handleReport}
               />
             ))}
             

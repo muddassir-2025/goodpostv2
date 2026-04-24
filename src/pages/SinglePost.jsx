@@ -9,8 +9,10 @@ import LikeButton from "../components/LikeButton";
 import PostSkeleton from "../components/PostSkeleton";
 import {
   ArrowLeftIcon,
-  CommentIcon,
+  DotsIcon,
   EditIcon,
+  ShareIcon,
+  ShieldIcon,
   TrashIcon,
 } from "../components/ui/Icons";
 import commentService from "../appwrite/comment";
@@ -36,6 +38,7 @@ export default function SinglePost() {
   const [editText, setEditText] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -216,6 +219,31 @@ export default function SinglePost() {
     }
   }
 
+  async function handleReport() {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    const ok = await confirm("Report this post for inappropriate content? If 5 users report it, it will be automatically removed.");
+    if (!ok) return;
+
+    try {
+      const res = await postService.reportPost(post.$id, user.$id);
+      
+      if (res.status === "deleted") {
+        toast("Post removed after multiple reports.", "warning");
+        navigate("/");
+      } else if (res.status === "already_reported") {
+        toast("You have already reported this post.", "info");
+      } else {
+        toast("Report submitted successfully.", "success");
+      }
+    } catch {
+      setError("Report failed. Please try again.");
+    }
+  }
+
   async function handleAddComment() {
     if (!user) {
       navigate("/login");
@@ -315,26 +343,60 @@ export default function SinglePost() {
               </div>
             </div>
 
-            {isOwner ? (
-              <div className="flex gap-1 cursor-pointer">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/edit/${post.$id}`)}
-                  className="inline-flex items-center gap-0 rounded-full border border-white/10 px-4 py-2 text-sm text-zinc-300 transition hover:border-white/20 hover:text-white"
-                >
-                  <EditIcon className="h-4 w-4" />
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeletePost}
-                  className="inline-flex items-center gap-0 rounded-full border border-rose-500/20 px-4 py-2 text-[10px] text-rose-300 transition hover:bg-rose-500/10"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                  Delete
-                </button>
-              </div>
-            ) : null}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                aria-label="More options"
+              >
+                <DotsIcon className="h-5 w-5" />
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-11 z-20 w-40 rounded-2xl border border-white/10 bg-zinc-950/95 p-2 shadow-2xl backdrop-blur-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleReport();
+                    }}
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm text-amber-300 transition hover:bg-amber-500/10"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ShieldIcon className="h-4 w-4" />
+                      Report
+                    </div>
+                    {post.reportCount > 0 && (
+                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-md bg-amber-500/20 px-1 text-[10px] font-bold">
+                        {post.reportCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {isOwner && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/edit/${post.$id}`)}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-zinc-200 transition hover:bg-white/5"
+                      >
+                        <EditIcon className="h-4 w-4" />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeletePost}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-rose-300 transition hover:bg-rose-500/10"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
