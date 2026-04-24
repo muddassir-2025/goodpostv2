@@ -115,13 +115,13 @@ class MessageService {
   }
 
   // ✅ Send a message
-  async sendMessage(conversationId, senderId, text) {
+  async sendMessage(conversationId, senderId, text, messageId = ID.unique()) {
     try {
       const now = new Date().toISOString();
       const message = await this.databases.createDocument(
         this.databaseId,
         this.messagesId,
-        ID.unique(),
+        messageId,
         {
           conversationId,
           senderId,

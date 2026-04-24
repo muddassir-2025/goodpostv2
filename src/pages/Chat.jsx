@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { ID } from "appwrite";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Avatar from "../components/Avatar";
@@ -105,7 +106,7 @@ export default function Chat() {
     setSending(true);
 
     // Optimistic UI update
-    const tempId = `temp_${Date.now()}`;
+    const tempId = ID.unique();
     const tempMsg = {
       $id: tempId,
       conversationId,
@@ -118,8 +119,8 @@ export default function Chat() {
     setMessages(prev => [...prev, tempMsg]);
 
     try {
-      const actualMsg = await messageService.sendMessage(conversationId, user.$id, text);
-      // Replace temp with actual
+      const actualMsg = await messageService.sendMessage(conversationId, user.$id, text, tempId);
+      // Replace temp with actual confirmed message
       setMessages(prev => prev.map(m => m.$id === tempId ? actualMsg : m));
     } catch (err) {
       console.error("Failed to send", err);
