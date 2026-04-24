@@ -211,10 +211,11 @@ class MessageService {
         // Appwrite realtime event payload
         if (
           response.events.includes(`databases.${this.databaseId}.collections.${this.messagesId}.documents.*.create`) ||
-          response.events.includes(`databases.${this.databaseId}.collections.${this.messagesId}.documents.*.update`)
+          response.events.includes(`databases.${this.databaseId}.collections.${this.messagesId}.documents.*.update`) ||
+          response.events.includes(`databases.${this.databaseId}.collections.${this.messagesId}.documents.*.delete`)
         ) {
            if (response.payload.conversationId === conversationId) {
-             callback(response.payload);
+             callback(response.payload, response.events.some(e => e.endsWith('.delete')));
            }
         }
       }

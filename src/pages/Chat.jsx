@@ -80,8 +80,12 @@ export default function Chat() {
     loadChat();
 
     // Subscribe to realtime
-    const unsubscribe = messageService.subscribeToMessages(conversationId, (payload) => {
+    const unsubscribe = messageService.subscribeToMessages(conversationId, (payload, isDeletedEvent) => {
       if (active) {
+        if (isDeletedEvent) {
+          setMessages(prev => prev.filter(m => m.$id !== payload.$id));
+          return;
+        }
         setMessages(prev => {
           // Prevent duplicates
           if (prev.find(m => m.$id === payload.$id)) {
@@ -168,14 +172,18 @@ export default function Chat() {
     }
   };
  
-  const handleClearChat = async () => {
+  const handleClearChat = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setHeaderMenuOpen(false);
+    
     const isConfirmed = await confirm("Are you sure you want to clear all messages in this chat? This cannot be undone.");
     if (!isConfirmed) return;
+ 
     try {
       setLoading(true);
       await messageService.clearChat(conversationId);
       setMessages([]);
-      setHeaderMenuOpen(false);
     } catch (error) {
       console.error("Failed to clear chat", error);
     } finally {
@@ -183,9 +191,14 @@ export default function Chat() {
     }
   };
  
-  const handleDeleteConversation = async () => {
+  const handleDeleteConversation = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setHeaderMenuOpen(false);
+ 
     const isConfirmed = await confirm("Delete this entire conversation? This will remove it for both parties.");
     if (!isConfirmed) return;
+ 
     try {
       setLoading(true);
       await messageService.deleteConversation(conversationId);
