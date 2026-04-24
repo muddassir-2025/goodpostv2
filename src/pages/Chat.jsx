@@ -255,7 +255,7 @@ export default function Chat() {
  
                         {/* Actions Menu */}
                         {canEdit && (
-                          <div className={`relative transition-all duration-200 flex items-center mb-4 ${menuOpenId === msg.$id ? "opacity-100" : "opacity-0 sm:opacity-0 group-hover:opacity-100"}`}>
+                          <div className={`relative transition-all duration-200 flex items-center mb-4 opacity-100`}>
                             <button 
                               onClick={() => setMenuOpenId(menuOpenId === msg.$id ? null : msg.$id)}
                               className={`p-1.5 rounded-full transition-colors ${menuOpenId === msg.$id ? "bg-white/10 text-white" : "bg-white/[0.05] text-white/40 hover:text-white hover:bg-white/10"}`}

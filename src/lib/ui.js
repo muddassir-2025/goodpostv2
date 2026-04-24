@@ -103,6 +103,13 @@ const storyGradients = [
   "from-violet-500 via-purple-500 to-pink-500",
   "from-orange-500 via-amber-400 to-yellow-300",
   "from-emerald-500 via-teal-400 to-sky-400",
+  "from-indigo-600 via-blue-500 to-cyan-400",
+  "from-rose-500 via-pink-500 to-orange-400",
+  "from-teal-500 via-emerald-400 to-lime-300",
+  "from-amber-600 via-orange-500 to-rose-500",
+  "from-violet-600 via-indigo-500 to-sky-500",
+  "from-cyan-500 via-sky-500 to-blue-600",
+  "from-red-500 via-orange-500 to-yellow-500",
 ];
 
 export function getStoryGradient(seed = "") {
