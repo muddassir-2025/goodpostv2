@@ -3,6 +3,7 @@ import { confirm } from "../confirmService";
 import { ID } from "appwrite";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { motion, AnimatePresence } from "framer-motion";
 import Avatar from "../components/Avatar";
 import { ArrowLeftIcon, EditIcon, TrashIcon, CloseIcon, DotsIcon } from "../components/ui/Icons";
 import messageService from "../appwrite/message";
@@ -167,17 +168,21 @@ export default function Chat() {
   if (!user) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] max-w-[850px] mx-auto rounded-[32px] border border-white/10 bg-[#121212]/92 shadow-[0_30px_90px_rgba(0,0,0,0.34)] overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-80px)] sm:h-[calc(100vh-100px)] max-w-[850px] mx-auto rounded-[32px] border border-white/10 bg-[#0a0a0b] shadow-[0_30px_90px_rgba(0,0,0,0.4)] overflow-hidden relative">
       
+      {/* Immersive background glow */}
+      <div className="absolute top-0 left-1/4 h-64 w-64 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 h-64 w-64 bg-violet-600/10 rounded-full blur-[100px] pointer-events-none" />
+
       {/* HEADER */}
-      <header className="flex items-center gap-4 border-b border-white/10 p-4 bg-black/40 backdrop-blur-md">
+      <header className="relative z-10 flex items-center gap-4 border-b border-white/[0.06] p-4 bg-black/40 backdrop-blur-xl">
         <button
           onClick={() => navigate("/messages")}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-300 transition hover:bg-white/10 hover:text-white"
         >
           <ArrowLeftIcon className="h-5 w-5" />
         </button>
-
+ 
         {loading ? (
           <div className="flex items-center gap-3 animate-pulse">
             <div className="w-10 h-10 rounded-full bg-white/10" />
@@ -187,146 +192,185 @@ export default function Chat() {
           <Link to={`/profile/${otherUser.id}`} className="flex items-center gap-3 cursor-pointer group">
             <Avatar name={otherUser.name} size="md" />
             <div>
-              <p className="font-bold text-white group-hover:underline">{otherUser.name}</p>
-              <p className="text-xs text-zinc-500">{getHandle(otherUser.name)}</p>
+              <p className="font-extrabold text-white group-hover:text-blue-400 transition-colors leading-tight">{otherUser.name}</p>
+              <p className="text-[11px] text-white/30 font-medium">{getHandle(otherUser.name)}</p>
             </div>
           </Link>
         ) : null}
       </header>
-
+ 
       {/* MESSAGES LIST */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="relative z-10 flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {loading ? (
-          <div className="flex justify-center py-10">
-            <div className="w-8 h-8 border-4 border-zinc-600 border-t-white rounded-full animate-spin" />
+          <div className="flex justify-center py-20">
+            <div className="w-8 h-8 border-3 border-white/10 border-t-white rounded-full animate-spin" />
           </div>
-        ) : messages.length > 0 ? (
-          messages.map((msg, index) => {
-            const isMe = msg.senderId === user.$id;
-            const showAvatar = !isMe && (index === 0 || messages[index - 1].senderId !== msg.senderId);
-            const isDeleted = msg.text === "🚫 This message was deleted";
-            
-            // Check if within 15 minutes
-            const msgTime = new Date(msg.createdAt).getTime();
-            const canEdit = isMe && !isDeleted && (Date.now() - msgTime <= 15 * 60 * 1000);
-
-            return (
-              <div key={msg.$id} className={`group flex ${isMe ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2`}>
-                <div className={`flex gap-2 max-w-[75%] sm:max-w-[65%] ${isMe ? "flex-row-reverse" : "flex-row"} items-center`}>
-                  
-                  {/* Avatar Placeholder for alignment if no avatar needed this row */}
-                  {!isMe && (
-                    <div className="w-8 shrink-0 flex items-end">
-                      {showAvatar && <Avatar name={otherUser?.name || "User"} size="sm" />}
-                    </div>
-                  )}
-
-                  <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                    <div
-                      className={`px-4 py-2 rounded-2xl text-[15px] leading-relaxed ${
-                        isDeleted ? "italic text-zinc-500 bg-white/5 border border-white/10" :
-                        isMe
-                          ? "bg-blue-600 text-white rounded-br-sm"
-                          : "bg-white/10 text-zinc-100 rounded-bl-sm"
-                      }`}
-                    >
-                      {msg.text}
-                    </div>
-                    <span className="text-[10px] text-zinc-600 mt-1 px-1">
-                      {formatRelativeTime(msg.createdAt)}
-                    </span>
-                  </div>
-
-                  {/* Actions Menu */}
-                  {canEdit && (
-                    <div className="relative opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center mx-2 shrink-0">
-                      <button 
-                        onClick={() => setMenuOpenId(menuOpenId === msg.$id ? null : msg.$id)}
-                        className="p-1.5 rounded-full bg-white/5 text-zinc-400 hover:text-white hover:bg-white/20 transition"
-                      >
-                        <DotsIcon className="h-4 w-4" />
-                      </button>
-
-                      {menuOpenId === msg.$id && (
-                        <div className="absolute right-0 top-full mt-1 z-50 w-32 rounded-xl border border-white/10 bg-zinc-900 p-1 shadow-2xl animate-in fade-in zoom-in-95">
-                          <button 
-                            onClick={() => {
-                              setEditingMessageId(msg.$id);
-                              setNewMessage(msg.text);
-                              setMenuOpenId(null);
-                            }}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white hover:bg-white/10 transition"
-                          >
-                            <EditIcon className="h-3 w-3" />
-                            Edit
-                          </button>
-                          <button 
-                            onClick={() => {
-                              handleDelete(msg.$id);
-                              setMenuOpenId(null);
-                            }}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10 transition"
-                          >
-                            <TrashIcon className="h-3 w-3" />
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-zinc-500">
-            <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-               <Avatar name={otherUser?.name || "User"} size="xl" />
-            </div>
-            <p className="text-sm">Say hello to {otherUser?.name}!</p>
+          <div className="flex flex-col gap-3">
+            <AnimatePresence initial={false}>
+              {messages.length > 0 ? (
+                messages.map((msg, index) => {
+                  const isMe = msg.senderId === user.$id;
+                  const showAvatar = !isMe && (index === 0 || messages[index - 1].senderId !== msg.senderId);
+                  const isDeleted = msg.text === "🚫 This message was deleted";
+                  const msgTime = new Date(msg.createdAt).getTime();
+                  const canEdit = isMe && !isDeleted && (Date.now() - msgTime <= 15 * 60 * 1000);
+ 
+                  return (
+                    <motion.div
+                      key={msg.$id}
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      layout
+                      className={`group flex ${isMe ? "justify-end" : "justify-start"}`}
+                    >
+                      <div className={`flex gap-3 max-w-[85%] sm:max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"} items-end`}>
+                        
+                        {!isMe && (
+                          <div className="w-8 shrink-0">
+                            {showAvatar ? (
+                              <Avatar name={otherUser?.name || "User"} size="sm" />
+                            ) : <div className="w-8" />}
+                          </div>
+                        )}
+ 
+                        <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                          <div
+                            className={`relative px-4 py-2.5 rounded-2xl text-[14px] leading-relaxed transition-all duration-200 ${
+                              isDeleted ? "italic text-white/30 bg-white/[0.03] border border-white/[0.05]" :
+                              isMe
+                                ? "bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-lg shadow-blue-900/20 rounded-br-sm"
+                                : "bg-white/[0.07] text-zinc-100 backdrop-blur-md rounded-bl-sm border border-white/[0.05]"
+                            }`}
+                          >
+                            {msg.text}
+                            {isMe && msg.seen && !isDeleted && (
+                              <span className="absolute -bottom-4 right-0 text-[9px] text-blue-400 font-bold uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Seen</span>
+                            )}
+                          </div>
+                          <span className="text-[9px] font-bold text-white/20 mt-1.5 uppercase tracking-wider px-1">
+                            {formatRelativeTime(msg.createdAt)}
+                          </span>
+                        </div>
+ 
+                        {/* Actions Menu */}
+                        {canEdit && (
+                          <div className="relative opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center mb-4">
+                            <button 
+                              onClick={() => setMenuOpenId(menuOpenId === msg.$id ? null : msg.$id)}
+                              className="p-1.5 rounded-full bg-white/[0.05] text-white/40 hover:text-white hover:bg-white/10"
+                            >
+                              <DotsIcon className="h-3 w-3" />
+                            </button>
+ 
+                            <AnimatePresence>
+                              {menuOpenId === msg.$id && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.9, y: 5 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.9, y: 5 }}
+                                  className="absolute bottom-full right-0 mb-2 z-50 w-32 rounded-xl border border-white/[0.08] bg-zinc-900/95 backdrop-blur-xl p-1 shadow-2xl overflow-hidden"
+                                >
+                                  <button 
+                                    onClick={() => {
+                                      setEditingMessageId(msg.$id);
+                                      setNewMessage(msg.text);
+                                      setMenuOpenId(null);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white/80 hover:bg-white/10 hover:text-white transition"
+                                  >
+                                    <EditIcon className="h-3 w-3" />
+                                    Edit
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      handleDelete(msg.$id);
+                                      setMenuOpenId(null);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10 transition"
+                                  >
+                                    <TrashIcon className="h-3 w-3" />
+                                    Delete
+                                  </button>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                   <div className="relative mb-6">
+                      <div className="absolute inset-0 bg-blue-500/20 blur-3xl rounded-full scale-150" />
+                      <Avatar name={otherUser?.name || "User"} size="xl" className="relative z-10 scale-125" />
+                   </div>
+                   <h2 className="text-xl font-black text-white mb-1">Start a Conversation</h2>
+                   <p className="text-sm text-white/30 max-w-[200px]">Send your first message to connect with {otherUser?.name}.</p>
+                </div>
+              )}
+            </AnimatePresence>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
-
+ 
       {/* INPUT */}
-      <div className="p-4 bg-black/40 border-t border-white/10 relative">
+      <footer className="relative z-20 p-5 bg-black/60 backdrop-blur-2xl border-t border-white/[0.06]">
         {editingMessageId && (
-          <div className="absolute bottom-full left-0 w-full bg-zinc-900 border-t border-white/10 px-4 py-2 flex items-center justify-between text-xs animate-in fade-in slide-in-from-bottom-2">
-            <div className="flex items-center gap-2 text-blue-400 font-medium">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="absolute bottom-full left-0 w-full bg-blue-600/90 backdrop-blur-xl px-5 py-2 flex items-center justify-between text-[11px] font-bold text-white border-b border-white/10"
+          >
+            <div className="flex items-center gap-2">
               <EditIcon className="h-3 w-3" />
-              Editing message
+              EDITING MODE
             </div>
             <button 
               onClick={() => {
                 setEditingMessageId(null);
                 setNewMessage("");
               }}
-              className="p-1 hover:bg-white/10 rounded-full text-zinc-400"
+              className="p-1 hover:bg-black/20 rounded-full"
             >
               <CloseIcon className="h-3 w-3" />
             </button>
-          </div>
+          </motion.div>
         )}
-
-        <form onSubmit={handleSend} className="flex gap-2">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Message..."
-            className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 py-3 text-sm text-white outline-none focus:border-white/30 transition placeholder:text-zinc-500"
-          />
+ 
+        <form onSubmit={handleSend} className="flex gap-3">
+          <div className="relative flex-1 group">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type your message..."
+              className="w-full bg-white/[0.05] border border-white/[0.08] rounded-2xl px-5 py-3.5 text-sm text-white outline-none focus:bg-white/[0.08] focus:border-white/20 transition-all duration-300 placeholder:text-white/20 shadow-inner"
+            />
+          </div>
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className="shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold transition hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`shrink-0 w-12 h-12 flex items-center justify-center rounded-2xl font-black transition-all duration-300 transform active:scale-95 ${
+              editingMessageId 
+                ? "bg-white text-black hover:bg-zinc-200"
+                : "bg-blue-600 text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500 hover:-translate-y-0.5"
+            } disabled:opacity-30 disabled:grayscale disabled:translate-y-0`}
           >
-            {editingMessageId ? "✓" : "↑"}
+            {editingMessageId ? "SAVE" : (
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            )}
           </button>
         </form>
-      </div>
-
+      </footer>
+ 
     </div>
   );
 }

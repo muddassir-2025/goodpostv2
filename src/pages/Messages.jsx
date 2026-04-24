@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import { motion, AnimatePresence } from "framer-motion";
 import Avatar from "../components/Avatar";
 import EmptyState from "../components/EmptyState";
 import { SearchIcon, UserIcon } from "../components/ui/Icons";
@@ -137,113 +138,154 @@ export default function Messages() {
   }
 
   return (
-    <div className="space-y-4 max-w-[850px] mx-auto">
+    <div className="space-y-6 max-w-[850px] mx-auto pb-20 px-4 sm:px-0">
       {/* HEADER & SEARCH */}
-      <section className="rounded-[32px] border border-white/10 bg-[#121212]/92 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.34)]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-          <h1 className="font-display text-2xl text-white font-bold">Messages</h1>
+      <section className="relative overflow-hidden rounded-[32px] border border-white/[0.08] bg-[#121212]/60 backdrop-blur-2xl p-6 shadow-[0_30px_100px_rgba(0,0,0,0.5)]">
+        {/* Decorative glow */}
+        <div className="absolute -top-20 -right-20 h-64 w-64 bg-blue-600/10 rounded-full blur-[80px] pointer-events-none" />
+        
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5 mb-8">
+          <div>
+            <h1 className="font-black text-3xl text-white tracking-tight">Messages</h1>
+            <p className="text-[13px] text-white/30 mt-1 font-medium">Connect with creators and friends</p>
+          </div>
           
-          <div className="flex items-center gap-3 rounded-full border border-white/10 bg-black/40 px-4 py-2 focus-within:border-white/30 transition w-full sm:max-w-[300px]">
-            <SearchIcon className="h-4 w-4 text-zinc-500" />
+          <div className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-5 py-3 focus-within:border-white/20 focus-within:bg-white/[0.06] transition-all duration-300 w-full sm:max-w-[320px] shadow-inner">
+            <SearchIcon className="h-4 w-4 text-white/20" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search users..."
-              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-600"
+              placeholder="Search people..."
+              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/10"
             />
           </div>
         </div>
-
+ 
         {/* TABS */}
         {!searchQuery && (
-          <div className="flex gap-1 overflow-x-auto hide-scrollbar rounded-full border border-white/5 bg-black/20 p-1 w-fit">
-            {["all", "unread", "following", "requests"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-4 py-1.5 text-[13px] font-bold capitalize transition whitespace-nowrap ${
-                  activeTab === tab
-                    ? "bg-white text-black shadow-lg"
-                    : "text-zinc-500 hover:text-white"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
+          <div className="relative flex gap-1 rounded-2xl bg-black/40 p-1.5 w-full sm:w-fit border border-white/[0.05]">
+            {["all", "unread", "following", "requests"].map((tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`relative z-10 flex-1 sm:flex-none rounded-xl px-5 py-2 text-[12px] font-black uppercase tracking-wider transition-all duration-300 whitespace-nowrap ${
+                    isActive ? "text-black" : "text-white/40 hover:text-white/70"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute inset-0 bg-white rounded-xl shadow-xl"
+                      transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    />
+                  )}
+                  <span className="relative z-20">{tab}</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </section>
-
+ 
       {/* SEARCH RESULTS OR CONVERSATION LIST */}
-      <section className="rounded-[32px] border border-white/10 bg-[#121212]/92 p-3 sm:p-5 shadow-[0_30px_90px_rgba(0,0,0,0.34)] min-h-[400px]">
+      <section className="min-h-[500px]">
         {loading ? (
-          <div className="flex justify-center py-10"><div className="w-8 h-8 border-4 border-zinc-600 border-t-white rounded-full animate-spin" /></div>
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+             <div className="w-10 h-10 border-3 border-white/10 border-t-white rounded-full animate-spin" />
+             <p className="text-xs font-bold text-white/20 uppercase tracking-widest">Encrypting chats...</p>
+          </div>
         ) : searchQuery ? (
           // SEARCH RESULTS
-          <div className="space-y-1">
-            <h3 className="px-3 pb-2 text-xs font-bold uppercase tracking-wider text-zinc-500">Suggested Users</h3>
-            {searchResults.length > 0 ? searchResults.map(u => (
-              <div
-                key={u.id}
-                onClick={() => handleUserClick(u)}
-                className="flex items-center gap-4 rounded-[20px] px-4 py-3 cursor-pointer transition hover:bg-white/5"
-              >
-                <Avatar name={u.name} size="md" />
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-white">{u.name}</p>
-                  <p className="text-xs text-zinc-500">{getHandle(u.name)}</p>
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-2"
+          >
+            <h3 className="px-6 pb-2 text-[11px] font-black uppercase tracking-[0.2em] text-white/20">Discovery</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {searchResults.length > 0 ? searchResults.map(u => (
+                <motion.div
+                  key={u.id}
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleUserClick(u)}
+                  className="flex items-center gap-4 rounded-[24px] border border-white/[0.05] bg-white/[0.03] px-5 py-4 cursor-pointer transition-all hover:bg-white/[0.06] hover:border-white/10 shadow-lg"
+                >
+                  <Avatar name={u.name} size="lg" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-black text-white truncate">{u.name}</p>
+                    <p className="text-[12px] text-white/30 font-medium truncate">{getHandle(u.name)}</p>
+                  </div>
+                </motion.div>
+              )) : (
+                <div className="col-span-full py-20 text-center rounded-[32px] border border-dashed border-white/10">
+                  <p className="text-sm text-white/20 font-bold uppercase tracking-widest">No users match your search</p>
                 </div>
-              </div>
-            )) : (
-              <p className="p-4 text-sm text-zinc-500 text-center">No users found.</p>
-            )}
-          </div>
+              )}
+            </div>
+          </motion.div>
         ) : (
           // CONVERSATION LIST
-          <div className="space-y-1">
-            {filteredConversations.length > 0 ? filteredConversations.map((conv) => (
-              <Link
-                key={conv.$id}
-                to={`/messages/${conv.$id}`}
-                className="flex items-center gap-4 rounded-[20px] px-3 py-3 sm:px-4 transition hover:bg-white/5 group"
-              >
-                <div 
-                  onClick={(e) => { e.preventDefault(); navigate(`/profile/${conv.otherUser.id}`); }}
-                  className="shrink-0 relative z-10"
+          <div className="space-y-3">
+            <AnimatePresence mode="popLayout">
+              {filteredConversations.length > 0 ? filteredConversations.map((conv) => (
+                <motion.div
+                  key={conv.$id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  layout
                 >
-                  <Avatar name={conv.otherUser.name} size="md" />
-                </div>
-                
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className={`truncate text-sm ${conv.unreadCount > 0 ? "font-bold text-white" : "font-medium text-zinc-200"}`}>
-                      {conv.otherUser.name}
-                    </p>
-                    {conv.lastMessageAt && (
-                      <span className="shrink-0 text-[11px] text-zinc-500">
-                        {formatRelativeTime(conv.lastMessageAt)}
+                  <Link
+                    to={`/messages/${conv.$id}`}
+                    className="flex items-center gap-5 rounded-[28px] border border-white/[0.06] bg-[#121212]/40 backdrop-blur-md px-4 py-4 sm:px-6 transition-all duration-300 hover:bg-white/[0.04] hover:border-white/10 hover:shadow-2xl hover:-translate-y-1 group"
+                  >
+                    <div 
+                      onClick={(e) => { e.preventDefault(); navigate(`/profile/${conv.otherUser.id}`); }}
+                      className="shrink-0 relative"
+                    >
+                      <Avatar name={conv.otherUser.name} size="lg" />
+                      {conv.unreadCount > 0 && (
+                        <div className="absolute -top-1 -right-1 h-4 w-4 bg-blue-500 rounded-full border-2 border-[#121212] animate-pulse" />
+                      )}
+                    </div>
+                    
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3 mb-0.5">
+                        <p className={`truncate text-[15px] ${conv.unreadCount > 0 ? "font-black text-white" : "font-bold text-white/70"}`}>
+                          {conv.otherUser.name}
+                        </p>
+                        {conv.lastMessageAt && (
+                          <span className="shrink-0 text-[10px] font-bold text-white/20 uppercase tracking-tighter">
+                            {formatRelativeTime(conv.lastMessageAt)}
+                          </span>
+                        )}
+                      </div>
+                      <p className={`truncate text-[13px] leading-relaxed ${conv.unreadCount > 0 ? "font-semibold text-white/90" : "text-white/30"}`}>
+                        {conv.lastMessage || "Start a conversation"}
+                      </p>
+                    </div>
+ 
+                    {conv.unreadCount > 0 && (
+                      <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-blue-600 px-2 text-[10px] font-black text-white shadow-lg shadow-blue-600/30">
+                        {conv.unreadCount}
                       </span>
                     )}
-                  </div>
-                  <p className={`mt-0.5 truncate text-[13px] ${conv.unreadCount > 0 ? "font-medium text-zinc-300" : "text-zinc-500"}`}>
-                    {conv.lastMessage || "Start a conversation"}
-                  </p>
-                </div>
-
-                {conv.unreadCount > 0 && (
-                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-500 px-1.5 text-[10px] font-bold text-white">
-                    {conv.unreadCount}
-                  </span>
-                )}
-              </Link>
-            )) : (
-              <EmptyState
-                eyebrow="Inbox"
-                title={`No ${activeTab !== 'all' ? activeTab : ''} messages`}
-                description="Search for a user to start a conversation."
-              />
-            )}
+                  </Link>
+                </motion.div>
+              )) : (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <EmptyState
+                    eyebrow="Inbox"
+                    title={`No ${activeTab !== 'all' ? activeTab : ''} messages`}
+                    description="Connect with others to start chatting."
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </section>
