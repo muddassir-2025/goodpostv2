@@ -11,11 +11,10 @@ import {
   TrendingIcon, 
   HeartIcon, 
   CommentIcon, 
-  ImageIcon, 
-  AudioIcon,
   PlayIcon,
   UserIcon,
-  DotsIcon
+  DotsIcon,
+  ArrowLeftIcon
 } from "../components/ui/Icons";
 
 import postService from "../appwrite/post";
@@ -249,6 +248,13 @@ export default function Search() {
       {/* 🔍 TOP NAV */}
       <header className="sticky top-16 z-40 bg-black/80 backdrop-blur-md md:top-20">
         <div className="flex items-center gap-4 px-4 py-3">
+          <button 
+            onClick={() => navigate(-1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-white/10 text-zinc-400 transition"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+          </button>
+          
           <div className="relative flex-1" ref={dropdownRef}>
             <div className="flex items-center gap-3 rounded-full bg-[#202327] px-4 py-2 transition focus-within:bg-black focus-within:ring-1 focus-within:ring-blue-500">
               <SearchIcon className="h-4 w-4 text-zinc-500" />

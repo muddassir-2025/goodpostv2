@@ -328,7 +328,7 @@ export default function SinglePost() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => navigate("/")} //-1 fixed
+                onClick={() => navigate(-1)}
                 className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-zinc-300 transition hover:border-white/20 hover:text-white"
                 aria-label="Go back"
               >

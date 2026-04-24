@@ -8,6 +8,7 @@ import followService from "../appwrite/follow";
 import postService from "../appwrite/post";
 import { syncFavorite, syncLike } from "../lib/engagement";
 import { fetchFeedPosts, sortPosts } from "../lib/posts";
+import { ArrowLeftIcon } from "../components/ui/Icons";
 
 export default function Feed() {
   const user = useSelector((state) => state.auth.userData);
@@ -187,8 +188,16 @@ export default function Feed() {
   return (
     <div className="space-y-5">
       <section className="rounded-[32px] border border-white/10 bg-[#121212]/90 p-5 shadow-[0_30px_90px_rgba(0,0,0,0.34)]">
-        <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">Feed</p>
-        <h1 className="font-display mt-3 text-3xl text-white">From people you follow</h1>
+        <div className="flex items-center gap-3 mb-4">
+          <button 
+            onClick={() => navigate(-1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-zinc-400 hover:bg-white/10 transition"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+          </button>
+          <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">Feed</p>
+        </div>
+        <h1 className="font-display text-3xl text-white">From people you follow</h1>
         <p className="mt-2 text-sm leading-6 text-zinc-400">
           See posts only from creators you already follow.
         </p>
