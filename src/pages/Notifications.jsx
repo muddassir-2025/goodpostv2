@@ -14,7 +14,6 @@ export default function Notifications() {
   const user = useSelector((state) => state.auth.userData);
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
-  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [menuOpenId, setMenuOpenId] = useState(null);
 
