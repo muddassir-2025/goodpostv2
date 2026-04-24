@@ -106,4 +106,13 @@ audio::-webkit-media-controls-time-remaining-display {
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  @keyframes waveform {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1.2); }
+  }
+
+  .animate-waveform {
+    animation: waveform 1s ease-in-out infinite;
+  }
 }
