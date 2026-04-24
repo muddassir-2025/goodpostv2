@@ -349,21 +349,26 @@ export default function Profile() {
                       className={`flex h-full w-full items-center justify-center p-3 bg-gradient-to-br ${gradient} relative overflow-hidden`}
                     >
                       {/* BG decoration */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-[0.12] group-hover:opacity-[0.2] transition-opacity select-none">
+                      <div className="absolute inset-0 flex items-center justify-center select-none">
                         {post.audioId ? (
-                          <div className="flex items-end justify-center gap-1 w-full px-4 h-1/2">
-                            {[...Array(10)].map((_, i) => (
+                          <div className="flex items-center justify-center gap-1 w-full h-full px-4 opacity-[0.15] group-hover:opacity-[0.25] transition-opacity">
+                            {[...Array(8)].map((_, i) => (
                               <div
                                 key={i}
-                                className="w-1 bg-white rounded-full"
-                                style={{ height: `${25 + ((i * 37) % 60)}%` }}
+                                className="w-1 bg-white rounded-full animate-waveform"
+                                style={{
+                                  height: `${30 + (Math.sin(i * 1.5) * 20 + 20)}%`,
+                                  animationDelay: `${i * 0.1}s`,
+                                }}
                               />
                             ))}
                           </div>
                         ) : (
-                          <span className="text-[80px] font-black text-white leading-none">
-                            {post.title.charAt(0).toUpperCase()}
-                          </span>
+                          <div className="absolute inset-0 bg-white/[0.03] flex items-center justify-center opacity-[0.1] group-hover:opacity-[0.2] transition-opacity">
+                            <span className="text-[100px] font-black text-white/50 leading-none blur-[2px]">
+                              {post.title.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
                         )}
                       </div>
                       <h3 className="relative z-10 text-center text-[10px] sm:text-[11px] font-bold text-white leading-snug line-clamp-3 drop-shadow-sm">
