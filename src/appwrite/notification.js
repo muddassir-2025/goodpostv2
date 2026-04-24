@@ -153,6 +153,43 @@ class NotificationService {
     }
   }
 
+  async deleteNotification(notificationId) {
+    try {
+      return await this.databases.deleteDocument(
+        this.databaseId,
+        this.notificationsCollectionId,
+        notificationId
+      );
+    } catch (error) {
+      console.error("Delete notification error:", error);
+    }
+  }
+
+  async deleteAllNotifications(userId) {
+    try {
+      const res = await this.databases.listDocuments(
+        this.databaseId,
+        this.notificationsCollectionId,
+        [
+          Query.equal("userId", userId),
+          Query.limit(100),
+        ]
+      );
+
+      return await Promise.all(
+        res.documents.map((doc) =>
+          this.databases.deleteDocument(
+            this.databaseId,
+            this.notificationsCollectionId,
+            doc.$id
+          )
+        )
+      );
+    } catch (error) {
+      console.error("Delete all notifications error:", error);
+    }
+  }
+
   // ✅ Real-time subscription
   subscribeToNotifications(userId, callback) {
     return this.client.subscribe(

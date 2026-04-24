@@ -7,13 +7,16 @@ import notificationService from "../appwrite/notification";
 import messageService from "../appwrite/message";
 import postService from "../appwrite/post";
 import { formatRelativeTime } from "../lib/ui";
-import { BellIcon, HeartIcon, CommentIcon, UserIcon, MessageIcon } from "../components/ui/Icons";
+import { BellIcon, HeartIcon, CommentIcon, UserIcon, MessageIcon, DotsIcon, TrashIcon } from "../components/ui/Icons";
+import { confirm } from "../confirmService";
 
 export default function Notifications() {
   const user = useSelector((state) => state.auth.userData);
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [menuOpenId, setMenuOpenId] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -109,6 +112,34 @@ export default function Notifications() {
     };
   }, [user, navigate]);
 
+  const handleDelete = async (e, id) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ok = await confirm("Delete this notification?");
+    if (!ok) return;
+
+    try {
+      await notificationService.deleteNotification(id);
+      setNotifications(prev => prev.filter(n => n.$id !== id));
+      setMenuOpenId(null);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (notifications.length === 0) return;
+    const ok = await confirm("Clear all notifications?");
+    if (!ok) return;
+
+    try {
+      await notificationService.deleteAllNotifications(user.$id);
+      setNotifications([]);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center p-10">
@@ -141,6 +172,12 @@ export default function Notifications() {
             <h1 className="font-display text-2xl text-white">Alerts</h1>
             <p className="text-sm text-zinc-400">Activity on your account</p>
           </div>
+          <button
+            onClick={handleClearAll}
+            className="ml-auto rounded-full bg-white/5 px-4 py-2 text-xs font-bold text-zinc-400 transition hover:bg-white/10 hover:text-white"
+          >
+            Clear All
+          </button>
         </div>
       </section>
 
@@ -215,6 +252,34 @@ export default function Notifications() {
 
               {!notif.isRead && (
                 <div className="mt-2 h-2 w-2 rounded-full bg-blue-500"></div>
+              )}
+
+              {/* ACTION MENU (For regular notifications) */}
+              {!notif.$id.startsWith("chat_") && (
+                <div className="relative ml-2 flex items-center self-center">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setMenuOpenId(menuOpenId === notif.$id ? null : notif.$id);
+                    }}
+                    className="p-2 rounded-full hover:bg-white/10 text-zinc-500 transition"
+                  >
+                    <DotsIcon className="h-4 w-4" />
+                  </button>
+
+                  {menuOpenId === notif.$id && (
+                    <div className="absolute right-0 top-full mt-1 z-50 w-32 rounded-xl border border-white/10 bg-zinc-900 p-1 shadow-2xl animate-in fade-in zoom-in-95">
+                      <button
+                        onClick={(e) => handleDelete(e, notif.$id)}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10 transition"
+                      >
+                        <TrashIcon className="h-3 w-3" />
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
               )}
             </Link>
           );
