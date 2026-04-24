@@ -8,10 +8,16 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-appwrite': ['appwrite'],
-          'vendor-react': ['react', 'react-dom', 'react-router-dom', 'react-redux', '@reduxjs/toolkit'],
-          'vendor-ml': ['@tensorflow/tfjs', 'nsfwjs'],
+        manualChunks(id) {
+          if (id.includes('appwrite')) {
+            return 'vendor-appwrite';
+          }
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom') || id.includes('react-redux') || id.includes('@reduxjs/toolkit')) {
+            return 'vendor-react';
+          }
+          if (id.includes('@tensorflow/tfjs') || id.includes('nsfwjs')) {
+            return 'vendor-ml';
+          }
         },
       },
     },
