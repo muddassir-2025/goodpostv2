@@ -70,7 +70,8 @@ export default function CreatePost() {
         try {
             const imageUrl = getFileUrl(imageId); 
             
-            const modRes = await fetch("/moderate-image", {
+            const API_URL = import.meta.env.VITE_MODERATION_API || "";
+            const modRes = await fetch(`${API_URL}/moderate-image`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ imageUrl })
