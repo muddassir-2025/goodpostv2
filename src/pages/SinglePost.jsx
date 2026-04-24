@@ -245,14 +245,13 @@ export default function SinglePost() {
     }
   }
 
-  async function handleAddComment(content, parentId = null) {
+  async function handleAddComment() {
     if (!user) {
       navigate("/login");
       return;
     }
 
-    const commentText = content || newComment;
-    if (!commentText.trim()) {
+    if (!newComment.trim()) {
       return;
     }
 
@@ -261,8 +260,7 @@ export default function SinglePost() {
         postId: post.$id,
         userId: user.$id,
         userName: user.name,
-        content: commentText.trim(),
-        parentId,
+        content: newComment.trim(),
       });
 
       const updated = await commentService.getComments(post.$id);
@@ -271,10 +269,7 @@ export default function SinglePost() {
         ...current,
         commentCount: (updated || []).length,
       }));
-      
-      if (!parentId) {
-        setNewComment("");
-      }
+      setNewComment("");
     } catch {
       setError("Comment could not be posted.");
     }
