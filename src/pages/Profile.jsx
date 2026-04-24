@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { logout } from "../features/auth/authSlice";
+import authService from "../appwrite/auth";
 import Avatar from "../components/Avatar";
 import EmptyState from "../components/EmptyState";
 import PostSkeleton from "../components/PostSkeleton";
@@ -59,6 +61,7 @@ function Divider() {
 
 export default function Profile() {
   const currentUser = useSelector((state) => state.auth.userData);
+  const dispatch = useDispatch();
   const { id }      = useParams();
   const isOwnProfile = !id || id === currentUser?.$id;
 
@@ -141,6 +144,17 @@ export default function Profile() {
     return () => (active = false);
   }, [id, currentUser, isOwnProfile]);
 
+  /* ── logout ── */
+  async function handleLogout() {
+    try {
+      await authService.logout();
+      dispatch(logout());
+      navigate("/login");
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+  }
+
   /* ── guards ── */
   if (!currentUser) {
     return (
@@ -219,12 +233,12 @@ export default function Profile() {
             {/* Own profile actions */}
             {isOwnProfile && (
               <div className="flex-shrink-0 flex gap-2">
-                <Link
-                  to="/create"
-                  className="px-3.5 py-1.5 rounded-full bg-grey-300 border-1 border-grey-00 text-black text-[13px] font-semibold hover:bg-white/90 transition-colors"
+                <button
+                  onClick={handleLogout}
+                  className="px-3.5 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[13px] font-semibold hover:bg-rose-500/20 transition-colors"
                 >
-                  New Post
-                </Link>
+                  Logout
+                </button>
                 <Link
                   to="/favorites"
                   className="px-3.5 py-1.5 rounded-full border border-white/[0.1] bg-white/[0.04] text-white/60 text-[13px] font-semibold hover:bg-white/[0.08] hover:text-white/90 transition-colors"
