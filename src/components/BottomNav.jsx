@@ -26,8 +26,8 @@ export default function BottomNav() {
   }, [user]);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/90 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur-xl md:hidden">
-      <div className="mx-auto flex max-w-[540px] items-center justify-between rounded-full border border-white/10 bg-[#121212]/95 px-2 py-2 shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/90 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur-xl md:border-transparent md:bg-transparent md:pb-6 pointer-events-none">
+      <div className="pointer-events-auto mx-auto flex max-w-[540px] items-center justify-between rounded-full border border-white/10 bg-[#121212]/95 px-2 py-2 shadow-[0_24px_80px_rgba(0,0,0,0.5)] backdrop-blur-md">
         {items.map((item) => {
           const IconComponent = item.icon;
 
