@@ -16,14 +16,14 @@ import {
 } from "../components/ui/Icons";
 
 const PRESET_GRADIENTS = [
-  "from-indigo-600 to-blue-500",
-  "from-rose-500 to-orange-400",
-  "from-emerald-500 to-teal-400",
-  "from-blue-600 to-cyan-500",
-  "from-amber-500 to-rose-500",
-  "from-indigo-600 to-violet-500",
-  "from-fuchsia-600 to-rose-500",
-  "from-cyan-600 to-blue-500",
+  "from-zinc-900 to-black",
+  "from-slate-900 to-zinc-950",
+  "from-neutral-900 to-slate-950",
+  "from-stone-900 to-neutral-950",
+  "from-zinc-800 to-zinc-950",
+  "from-slate-800 to-slate-950",
+  "from-gray-900 to-black",
+  "from-zinc-950 to-zinc-900",
 ];
 
 const getPostGradient = (id) => {
