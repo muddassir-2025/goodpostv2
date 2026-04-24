@@ -14,7 +14,7 @@ export default function StoryBar({ stories = [] }) {
         <p className="text-xs text-zinc-500">Tap to peek</p>
       </div>
 
-      <div className="hide-scrollbar flex gap-4 overflow-x-auto pb-1">
+      <div className="flex gap-4 overflow-x-auto pb-3 pt-1">
         {stories.map((story) => (
           <Link
             key={story.id}
