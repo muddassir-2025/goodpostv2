@@ -15,7 +15,7 @@ const items = [
   { to: "/", label: "Home", icon: HomeIcon },
   { to: "/search", label: "Search", icon: SearchIcon },
   { to: "/feed", label: "Following", icon: ReelsIcon },
-  { to: "/favorite", label: "Saved", icon: HeartIcon },
+  { to: "/favorites", label: "Saved", icon: HeartIcon },
   { to: "/profile", label: "Profile", icon: UserIcon },
 ];
 
