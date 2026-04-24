@@ -239,16 +239,18 @@ class MessageService {
     );
   }
 
-  // ✅ Clear chat (Delete all messages in a conversation)
+  // ✅ Clear chat (Soft-delete all messages)
   async clearChat(conversationId) {
     try {
       const messages = await this.getMessages(conversationId);
-      const deletePromises = (messages?.documents || []).map((msg) =>
-        this.databases.deleteDocument(this.databaseId, this.messagesId, msg.$id)
+      const updatePromises = (messages?.documents || []).map((msg) =>
+        this.databases.updateDocument(this.databaseId, this.messagesId, msg.$id, {
+          text: "🚫 This message was deleted",
+        })
       );
-      await Promise.all(deletePromises);
-      
-      // Update conversation last message
+      await Promise.all(updatePromises);
+
+      // Reset conversation last message
       await this.databases.updateDocument(
         this.databaseId,
         this.conversationsId,
@@ -264,16 +266,19 @@ class MessageService {
     }
   }
 
-  // ✅ Delete Conversation
+  // ✅ Delete Conversation (soft-clear + mark as deleted)
   async deleteConversation(conversationId) {
     try {
-      // First clear all messages
       await this.clearChat(conversationId);
-      // Then delete conversation document
-      await this.databases.deleteDocument(
+      // Mark conversation as inactive
+      await this.databases.updateDocument(
         this.databaseId,
         this.conversationsId,
-        conversationId
+        conversationId,
+        {
+          lastMessage: "[Conversation deleted]",
+          unreadCount: 0,
+        }
       );
     } catch (error) {
       console.log("deleteConversation error:", error);

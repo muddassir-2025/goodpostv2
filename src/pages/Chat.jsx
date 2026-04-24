@@ -178,13 +178,15 @@ export default function Chat() {
       const isConfirmed = await confirm("Are you sure you want to clear all messages in this chat? This cannot be undone.");
       if (!isConfirmed) return;
       try {
-        setLoading(true);
+        // Immediately update the UI
+        setMessages(prev => prev.map(m => ({ ...m, text: "🚫 This message was deleted" })));
+        // Then sync with server
         await messageService.clearChat(conversationId);
-        setMessages([]);
       } catch (error) {
         console.error("Failed to clear chat", error);
-      } finally {
-        setLoading(false);
+        // Reload messages if it failed
+        const msgs = await messageService.getMessages(conversationId);
+        setMessages(msgs.documents || []);
       }
     }, 150);
   };
@@ -192,16 +194,14 @@ export default function Chat() {
   const handleDeleteConversation = () => {
     setHeaderMenuOpen(false);
     setTimeout(async () => {
-      const isConfirmed = await confirm("Delete this entire conversation? This will remove it for both parties.");
+      const isConfirmed = await confirm("Delete this conversation? All messages will be cleared.");
       if (!isConfirmed) return;
       try {
-        setLoading(true);
         await messageService.deleteConversation(conversationId);
         navigate("/messages");
       } catch (error) {
         console.error("Failed to delete conversation", error);
-      } finally {
-        setLoading(false);
+        navigate("/messages");
       }
     }, 150);
   };
