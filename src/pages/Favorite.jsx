@@ -57,8 +57,10 @@ export default function Favorites() {
         const favoriteResponse = await favoriteService.getUSerAllFavorites(user.$id);
         const postIds = favoriteResponse?.documents?.map((item) => item.postId) || [];
         if (!postIds.length) { if (active) setPosts([]); return; }
-        const resolvedPosts = await Promise.all(postIds.map((id) => postService.getPostById(id)));
-        if (active) setPosts(resolvedPosts.filter(Boolean));
+        
+        // Bulk fetch posts
+        const res = await postService.getPosts([Query.equal("$id", postIds.slice(0, 100))]);
+        if (active) setPosts(res?.documents || []);
       } catch (error) {
         console.error("Favorites load error:", error);
       } finally {

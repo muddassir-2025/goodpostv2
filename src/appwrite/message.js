@@ -97,15 +97,15 @@ class MessageService {
   }
 
   // ✅ Get messages for a conversation
-  async getMessages(conversationId) {
+  async getMessages(conversationId, limit = 100) {
     try {
       return await this.databases.listDocuments(
         this.databaseId,
         this.messagesId,
         [
           Query.equal("conversationId", conversationId),
-          Query.orderAsc("createdAt"), // Order by oldest first for chat history
-          Query.limit(100),
+          Query.orderDesc("createdAt"), // Order by newest first for better polling/preview
+          Query.limit(limit),
         ]
       );
     } catch (error) {

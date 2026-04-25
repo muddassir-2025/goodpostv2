@@ -54,8 +54,8 @@ export default function Navbar() {
       const unreadChatPromises = convDocs
         .filter(c => c.unreadCount > 0 && c.lastMessage)
         .map(async (c) => {
-          const msgs = await messageService.getMessages(c.$id);
-          const lastMsg = msgs.documents[msgs.documents.length - 1];
+          const msgs = await messageService.getMessages(c.$id, 1);
+          const lastMsg = msgs.documents[0];
           return lastMsg && lastMsg.senderId !== user.$id;
         });
 

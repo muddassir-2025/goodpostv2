@@ -27,23 +27,12 @@ export default function Notifications() {
 
     async function loadAllNotifications() {
       try {
-        const [notifRes, convRes, postsRes] = await Promise.all([
+        const [notifRes, convRes] = await Promise.all([
           notificationService.getUserNotifications(user.$id),
-          messageService.getConversations(user.$id),
-          postService.getPosts() // Used to find user names
+          messageService.getConversations(user.$id)
         ]);
 
         if (!active) return;
-
-        // Build a user map for faster lookups
-        const userMap = {};
-        if (postsRes?.documents) {
-          postsRes.documents.forEach(p => {
-            if (p.authorID && p.authorName) {
-              userMap[p.authorID] = p.authorName;
-            }
-          });
-        }
 
         const regularNotifs = notifRes?.documents || [];
         
@@ -63,7 +52,7 @@ export default function Notifications() {
               conversationId: c.$id,
               type: "chat",
               actorId: otherId,
-              actorName: userMap[otherId] || "Someone",
+              actorName: "Someone", // Optimized: removed heavy userMap fetch
               content: c.lastMessage,
               $createdAt: c.lastMessageAt,
               isRead: false

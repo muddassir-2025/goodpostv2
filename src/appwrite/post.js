@@ -192,11 +192,15 @@ class PostService {
     }
   }
 
-  // ✅ Preview Image
+  // ✅ Preview Image (Optimized for bandwidth)
   getFileView(fileId) {
     return this.storage.getFilePreview(
       import.meta.env.VITE_APPWRITE_BUCKET_ID,
-      fileId
+      fileId,
+      600, // width
+      600, // height
+      "center", // gravity
+      60 // quality (0-100) - Massive bandwidth saver
     );
   }
 

@@ -78,51 +78,51 @@ export function sortPosts(posts = [], filter = "latest") {
 }
 
 export async function enrichPostsForUser(posts = [], user) {
-  if (!user) {
-    return posts.map((post) => {
-      const safePost = normalizePost(post);
-
-      return {
-      ...safePost,
-      likeCount: safePost.likeCount,
-      commentCount: safePost.commentCount,
+  if (!user || posts.length === 0) {
+    return posts.map((post) => ({
+      ...normalizePost(post),
       liked: false,
       saved: false,
       favoriteId: null,
-    };
-    });
+    }));
   }
 
-  return Promise.all(
-    posts.map(async (post) => {
+  try {
+    const postIds = posts.map(p => p.$id);
+    
+    // Batch fetch all likes and favorites for these posts for this user
+    const [likesRes, favoritesRes] = await Promise.all([
+      likeService.databases.listDocuments(
+        import.meta.env.VITE_APPWRITE_DATABASE_ID,
+        import.meta.env.VITE_APPWRITE_LIKES_ID,
+        [Query.equal("userId", user.$id), Query.equal("postId", postIds)]
+      ),
+      favoriteService.databases.listDocuments(
+        import.meta.env.VITE_APPWRITE_DATABASE_ID,
+        import.meta.env.VITE_APPWRITE_FAVORITES_ID,
+        [Query.equal("userId", user.$id), Query.equal("postId", postIds)]
+      )
+    ]);
+
+    const likedPostIds = new Set(likesRes.documents.map(d => d.postId));
+    const favoriteMap = {};
+    favoritesRes.documents.forEach(d => {
+      favoriteMap[d.postId] = d.$id;
+    });
+
+    return posts.map((post) => {
       const safePost = normalizePost(post);
-
-      try {
-        const [likedRes, favoriteRes] = await Promise.all([
-          likeService.getUserLike(safePost.$id, user.$id),
-          favoriteService.getUserFavorite(user.$id, safePost.$id),
-        ]);
-
-        return {
-          ...safePost,
-          likeCount: safePost.likeCount,
-          commentCount: safePost.commentCount,
-          liked: likedRes?.total > 0,
-          saved: favoriteRes?.total > 0,
-          favoriteId: favoriteRes?.documents?.[0]?.$id || null,
-        };
-      } catch {
-        return {
-          ...safePost,
-          likeCount: safePost.likeCount,
-          commentCount: safePost.commentCount,
-          liked: false,
-          saved: false,
-          favoriteId: null,
-        };
-      }
-    }),
-  );
+      return {
+        ...safePost,
+        liked: likedPostIds.has(safePost.$id),
+        saved: !!favoriteMap[safePost.$id],
+        favoriteId: favoriteMap[safePost.$id] || null,
+      };
+    });
+  } catch (error) {
+    console.error("Enrichment error:", error);
+    return posts.map(p => ({ ...normalizePost(p), liked: false, saved: false, favoriteId: null }));
+  }
 }
 
 export async function fetchFeedPosts(user, queries = []) {
