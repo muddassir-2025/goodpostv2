@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Query } from "appwrite";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -133,27 +133,71 @@ export default function Profile() {
     finally { setLoadingFollow(false); }
   }
 
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      if (!currentUser) { setLoading(false); return; }
-      setLoading(true);
-      try {
-        const target = isOwnProfile ? currentUser.$id : id;
-        const [feedPosts, favRes] = await Promise.all([
-          fetchFeedPosts(currentUser, [Query.equal("authorID", target)]),
-          favoriteService.getUSerAllFavorites(currentUser.$id),
-        ]);
-        if (active) {
-          setPosts(feedPosts);
-          setSavedCount(isOwnProfile ? (favRes?.documents?.length || 0) : 0);
-        }
-      } catch (e) { console.error(e); }
-      finally { if (active) setLoading(false); }
+  // ✅ SERVER-SIDE PAGINATION STATE
+  const [hasMore,     setHasMore]     = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 12; // 4 rows of 3
+  const loaderRef = useRef(null);
+
+  const loadPosts = async (isInitial = false) => {
+    if (!currentUser) return;
+    if (!hasMore && !isInitial) return;
+    if (loadingMore) return;
+
+    if (isInitial) setLoading(true);
+    else setLoadingMore(true);
+
+    try {
+      const target = isOwnProfile ? currentUser.$id : id;
+      const queries = [
+        Query.equal("authorID", target),
+        Query.limit(PAGE_SIZE),
+        Query.offset(isInitial ? 0 : posts.length),
+        Query.orderDesc("$createdAt"),
+      ];
+
+      const [feedPosts, favRes] = await Promise.all([
+        fetchFeedPosts(currentUser, queries),
+        isInitial ? favoriteService.getUSerAllFavorites(currentUser.$id) : Promise.resolve(null),
+      ]);
+
+      if (isInitial) {
+        setPosts(feedPosts);
+        setSavedCount(isOwnProfile ? (favRes?.documents?.length || 0) : 0);
+      } else {
+        setPosts(prev => [...prev, ...feedPosts]);
+      }
+
+      if (feedPosts.length < PAGE_SIZE) {
+        setHasMore(false);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
-    load();
-    return () => (active = false);
-  }, [id, currentUser, isOwnProfile]);
+  };
+
+  useEffect(() => {
+    setPosts([]);
+    setHasMore(true);
+    loadPosts(true);
+  }, [id, currentUser?.$id, isOwnProfile]);
+
+  // ✅ INFINITE SCROLL OBSERVER
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          loadPosts(false);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (loaderRef.current) observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, posts.length]);
 
   async function handleLogout() {
     try {
@@ -490,7 +534,7 @@ export default function Profile() {
         ) : visiblePosts.length ? (
           <div className="grid grid-cols-3 gap-1 sm:gap-1.5 p-1.5 animate-in fade-in duration-300">
             {visiblePosts.map((post) => {
-              const imageSrc = getFileUrl(post.featuredImg);
+              const imageSrc = getFileUrl(post.featuredImg, { width: 400, output: "webp" }); // Added compression
               const [g1, g2] = getPostGradient(post.$id);
 
               return (
@@ -593,6 +637,13 @@ export default function Profile() {
                 </Link>
               );
             })}
+            
+            {/* INFINITE SCROLL LOADER */}
+            {hasMore && (
+              <div ref={loaderRef} className="col-span-3 py-10 flex justify-center">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-500 border-t-white"></div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="px-4 pt-12">

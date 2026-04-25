@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Query } from "appwrite";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -27,24 +27,68 @@ export default function TagFeed() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("latest");
 
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await fetchFeedPosts(user, [
-          Query.contains("tags", [tag])
-        ]);
-        if (active) setPosts(data);
-      } catch (err) {
-        console.log("Tag feed error:", err);
-      } finally {
-        if (active) setLoading(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 10;
+  const loaderRef = useRef(null);
+
+  const loadPosts = async (isInitial = false) => {
+    if (!hasMore && !isInitial) return;
+    if (loadingMore) return;
+
+    if (isInitial) setLoading(true);
+    else setLoadingMore(true);
+
+    try {
+      const queries = [
+        Query.contains("tags", [tag]),
+        Query.limit(PAGE_SIZE),
+        Query.offset(isInitial ? 0 : posts.length),
+      ];
+
+      // Server-side sorting
+      if (filter === "likes") queries.push(Query.orderDesc("likeCount"));
+      else if (filter === "comments") queries.push(Query.orderDesc("commentCount"));
+      else queries.push(Query.orderDesc("$createdAt"));
+
+      const data = await fetchFeedPosts(user, queries);
+
+      if (isInitial) {
+        setPosts(data);
+      } else {
+        setPosts(prev => [...prev, ...data]);
       }
+
+      if (data.length < PAGE_SIZE) {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
-    load();
-    return () => { active = false; };
-  }, [tag, user]);
+  };
+
+  useEffect(() => {
+    setPosts([]);
+    setHasMore(true);
+    loadPosts(true);
+  }, [tag, user, filter]);
+
+  // ✅ INFINITE SCROLL OBSERVER
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          loadPosts(false);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    if (loaderRef.current) observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loading, posts.length]);
 
   /* ── LIKE ── */
   const handleToggleLike = async (post) => {
@@ -121,7 +165,7 @@ export default function TagFeed() {
     }
   };
 
-  const visiblePosts = sortPosts(posts, filter);
+
 
   return (
     <div className="min-h-screen bg-[#0a0a0b] text-white">
@@ -157,8 +201,8 @@ export default function TagFeed() {
               </h1>
               {!loading && (
                 <p className="mt-2 text-[13px] text-white/35">
-                  {visiblePosts.length}{" "}
-                  {visiblePosts.length === 1 ? "post" : "posts"}
+                  {posts.length}{" "}
+                  {posts.length === 1 ? "post" : "posts"}
                 </p>
               )}
             </div>
@@ -195,9 +239,9 @@ export default function TagFeed() {
           <div className="px-4">
             <PostSkeleton count={3} />
           </div>
-        ) : visiblePosts.length ? (
+        ) : posts.length ? (
           <div className="space-y-3 px-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            {visiblePosts.map((post) => (
+            {posts.map((post) => (
               <PostCard
                 key={post.$id}
                 post={post}
@@ -209,6 +253,13 @@ export default function TagFeed() {
                 onReport={handleReport}
               />
             ))}
+            
+            {/* INFINITE SCROLL LOADER */}
+            {hasMore && (
+              <div ref={loaderRef} className="py-6 flex justify-center">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-500 border-t-white"></div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="px-4 pt-8">

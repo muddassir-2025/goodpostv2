@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useState, useRef } from "react";
+import { Query } from "appwrite";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import EmptyState from "../components/EmptyState";
@@ -34,90 +35,79 @@ export default function Home() {
   const [filter, setFilter] = useState("discovery");
   const [mediaFilter, setMediaFilter] = useState("all"); // all, images, audio
 
-  // ✅ INFINITE SCROLL STATE
-  const [visibleCount, setVisibleCount] = useState(5);
+  // ✅ SERVER-SIDE PAGINATION STATE
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 10;
+  
   const loaderRef = useRef(null);
-
   const deferredSearch = useDeferredValue(search);
 
-  useEffect(() => {
-    let active = true;
+  const loadPosts = async (isInitial = false) => {
+    if (!hasMore && !isInitial) return;
+    if (loadingMore) return;
 
-    async function loadFeed() {
-      setLoading(true);
-      setError("");
+    if (isInitial) setLoading(true);
+    else setLoadingMore(true);
 
-      try {
-        const data = await fetchFeedPosts(user);
+    try {
+      const queries = [
+        Query.limit(PAGE_SIZE),
+        Query.offset(isInitial ? 0 : posts.length),
+        Query.orderDesc("$createdAt"),
+      ];
 
-        const followingIds = user
-          ? await followService.getFollowing(user.$id)
-          : [];
-
-        const allowed = user
-          ? new Set([user.$id, ...followingIds])
-          : new Set();
-
-        const storyPosts = data.filter((post) =>
-          allowed.has(post.authorID) && (post.isPublished !== false || post.authorID === user?.$id)
-        );
-
-        let builtStories = buildStories(storyPosts, user);
-
-        builtStories = builtStories.sort(
-          (a, b) => Number(b.isOwn) - Number(a.isOwn)
-        );
-
-        if (active) {
-          setPosts(data);          
-          setStories(builtStories); 
-          setAllowedUsers(allowed); // ✅ NEW
-        }
-      } catch (err) {
-        console.error(err);
-        if (active) {
-          setError("Could not load the feed right now.");
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
+      if (mediaFilter === "images") queries.push(Query.isNotNull("featuredImg"));
+      if (mediaFilter === "audio") queries.push(Query.isNotNull("audioId"));
+      
+      if (filter === "following" && user) {
+        const followingIds = await followService.getFollowing(user.$id);
+        if (followingIds.length > 0) {
+          queries.push(Query.equal("authorID", followingIds));
+        } else {
+          setPosts([]);
+          setHasMore(false);
+          return;
         }
       }
+
+      const data = await fetchFeedPosts(user, queries);
+
+      if (isInitial) {
+        setPosts(data);
+        const followingIds = user ? await followService.getFollowing(user.$id) : [];
+        const allowed = user ? new Set([user.$id, ...followingIds]) : new Set();
+        const storyPosts = data.filter(p => allowed.has(p.authorID));
+        setStories(buildStories(storyPosts, user).sort((a,b) => Number(b.isOwn) - Number(a.isOwn)));
+        setAllowedUsers(allowed);
+      } else {
+        setPosts(prev => [...prev, ...data]);
+      }
+
+      if (data.length < PAGE_SIZE) {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Could not load posts.");
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
+  };
 
-    loadFeed();
-
-    return () => {
-      active = false;
-    };
-  }, [user]);
-
-  const searchFiltered = filterPosts(posts, deferredSearch);
-  const feedFiltered = filter === "following" 
-    ? searchFiltered.filter((p) => allowedUsers.has(p.authorID) && p.authorID !== user?.$id)
-    : searchFiltered;
-
-  // ✅ Global Privacy Filter: Only show public posts, or own private posts
-  const globalFiltered = feedFiltered.filter(p => {
-    const isOwn = p.authorID === user?.$id;
-    const isPublic = p.isPublished !== false;
-    return isPublic || isOwn; 
-  });
-
-  const mediaFiltered = globalFiltered.filter(p => {
-    if (mediaFilter === "images") return !!p.featuredImg;
-    if (mediaFilter === "audio") return !!p.audioId;
-    return true;
-  });
-
-  const visiblePosts = sortPosts(mediaFiltered, filter === "following" ? "latest" : filter);
+  useEffect(() => {
+    setPosts([]);
+    setHasMore(true);
+    loadPosts(true);
+  }, [user, filter, mediaFilter, deferredSearch]);
 
   // ✅ INFINITE SCROLL OBSERVER
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => prev + 5);
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          loadPosts(false);
         }
       },
       { threshold: 0.1 }
@@ -128,7 +118,7 @@ export default function Home() {
     }
 
     return () => observer.disconnect();
-  }, [visiblePosts]);
+  }, [hasMore, loadingMore, loading, posts.length]);
 
   function updatePost(postId, updater) {
     setPosts((current) =>
@@ -359,7 +349,7 @@ export default function Home() {
       {/* POSTS */}
       {loading ? (
         <PostSkeleton count={3} />
-      ) : visiblePosts.length ? (
+      ) : posts.length ? (
         <AnimatePresence mode="wait">
           <motion.div
             key={`${filter}-${mediaFilter}`}
@@ -369,7 +359,7 @@ export default function Home() {
             transition={{ duration: 0.2 }}
             className="space-y-4"
           >
-            {visiblePosts.slice(0, visibleCount).map((post, index) => (
+            {posts.map((post, index) => (
               <PostCard
                 key={post.$id}
                 post={post}
@@ -384,13 +374,13 @@ export default function Home() {
             ))}
 
             {/* INFINITE SCROLL LOADER */}
-            {visibleCount < visiblePosts.length && (
+            {hasMore && (
               <div ref={loaderRef} className="py-6 flex justify-center">
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-500 border-t-white"></div>
               </div>
             )}
 
-            {visibleCount >= visiblePosts.length && visiblePosts.length > 5 && (
+            {!hasMore && posts.length > 5 && (
               <p className="py-8 text-center text-xs text-zinc-500">
                 You've caught up with everything!
               </p>
