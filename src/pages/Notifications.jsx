@@ -41,7 +41,7 @@ export default function Notifications() {
           .filter(c => c.unreadCount > 0 && c.lastMessage)
           .map(async (c) => {
             // Fetch the last message to see who sent it
-            const msgs = await messageService.getMessages(c.$id);
+            const msgs = await messageService.getMessages(c.$id, 1);
             const lastMsg = msgs.documents[msgs.documents.length - 1];
             
             if (!lastMsg || lastMsg.senderId === user.$id) return null;

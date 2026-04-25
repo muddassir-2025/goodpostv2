@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Query } from "appwrite";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
@@ -31,11 +32,10 @@ export default function TagFeed() {
     async function load() {
       setLoading(true);
       try {
-        const data = await fetchFeedPosts(user);
-        const filtered = data.filter((post) =>
-          post.tags?.some((t) => t.toLowerCase() === tag.toLowerCase())
-        );
-        if (active) setPosts(filtered);
+        const data = await fetchFeedPosts(user, [
+          Query.contains("tags", [tag])
+        ]);
+        if (active) setPosts(data);
       } catch (err) {
         console.log("Tag feed error:", err);
       } finally {

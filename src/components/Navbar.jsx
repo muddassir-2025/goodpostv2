@@ -66,8 +66,15 @@ export default function Navbar() {
     }
 
     checkNotifications();
-    const interval = setInterval(checkNotifications, 30000); // Check every 30s
-    return () => clearInterval(interval);
+
+    // Switch from polling to Realtime for zero-waste bandwidth
+    const unsubNotifs = notificationService.subscribeToNotifications(user.$id, checkNotifications);
+    const unsubChats = messageService.subscribeToConversations(user.$id, checkNotifications);
+
+    return () => {
+      unsubNotifs();
+      unsubChats();
+    };
   }, [user]);
 
   return (

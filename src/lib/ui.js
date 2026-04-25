@@ -20,7 +20,7 @@ export function getFileUrl(fileId, params = {}) {
     return "";
   }
 
-  let url = `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/view?project=${projectId}`;
+  let url = `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/preview?project=${projectId}`;
   
   Object.entries(params).forEach(([key, value]) => {
     url += `&${key}=${encodeURIComponent(value)}`;

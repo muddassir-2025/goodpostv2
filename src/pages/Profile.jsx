@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Query } from "appwrite";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../features/auth/authSlice";
@@ -138,14 +139,13 @@ export default function Profile() {
       if (!currentUser) { setLoading(false); return; }
       setLoading(true);
       try {
+        const target = isOwnProfile ? currentUser.$id : id;
         const [feedPosts, favRes] = await Promise.all([
-          fetchFeedPosts(currentUser),
+          fetchFeedPosts(currentUser, [Query.equal("authorID", target)]),
           favoriteService.getUSerAllFavorites(currentUser.$id),
         ]);
-        const target    = isOwnProfile ? currentUser.$id : id;
-        const userPosts = feedPosts.filter((p) => p.authorID === target);
         if (active) {
-          setPosts(userPosts);
+          setPosts(feedPosts);
           setSavedCount(isOwnProfile ? (favRes?.documents?.length || 0) : 0);
         }
       } catch (e) { console.error(e); }

@@ -44,10 +44,9 @@ export default function Chat() {
       setLoading(true);
 
       try {
-        const [conv, msgs, postsRes] = await Promise.all([
+        const [conv, msgs] = await Promise.all([
           messageService.getConversation(conversationId),
           messageService.getMessages(conversationId),
-          postService.getPosts() // For getting user details
         ]);
 
         if (!active || !conv) return;
@@ -55,9 +54,13 @@ export default function Chat() {
         setConversation(conv);
         setMessages(msgs.documents || []);
 
-        // Get other user info
+        // Get other user info (targeted query instead of fetching all posts)
         const otherId = conv.members.find(id => id !== user.$id);
-        const postByOther = (postsRes?.documents || []).find(p => p.authorID === otherId);
+        const postRes = await postService.getPosts([
+          Query.equal("authorID", otherId),
+          Query.limit(1)
+        ]);
+        const postByOther = postRes?.documents?.[0];
         
         setOtherUser({
           id: otherId,
