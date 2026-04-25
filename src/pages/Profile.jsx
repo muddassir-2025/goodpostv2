@@ -249,8 +249,8 @@ export default function Profile() {
       : posts[0]?.authorName || `User ${id?.slice(0, 6)}`;
 
   const bio =
-    (isOwnProfile ? currentUser.prefs?.bio : "Exploring and sharing moments.") ||
-    "Sharing everyday moments.";
+    (isOwnProfile ? currentUser.prefs?.bio : "Exploring and sharing on GoodPost.") ||
+    "Sharing on GoodPost.";
 
   const AV_COLORS = [
     ["#7c3aed", "#a78bfa"],

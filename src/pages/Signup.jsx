@@ -48,7 +48,7 @@ export default function Signup() {
 
   return (
     <AuthShell
-      eyebrow="Join Moments"
+      eyebrow="Join GoodPost"
       title="Create your account"
       description="Set up your profile and start sharing photos, captions, and audio posts."
       footerText="Already have an account?"

@@ -16,7 +16,7 @@ export default function AuthShell({
         <section className="hidden rounded-[36px] border border-white/10 bg-white/5 p-8 shadow-[0_40px_120px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:block">
           <p className="text-xs uppercase tracking-[0.35em] text-zinc-500">{eyebrow}</p>
           <h1 className="font-display mt-6 text-5xl leading-tight text-white">
-            Share moments with a feed that feels alive.
+            Share your life with a feed that feels alive.
           </h1>
           <p className="mt-5 max-w-lg text-base leading-7 text-zinc-400">
             A modern social UI built around rich posts, smooth interactions, and a

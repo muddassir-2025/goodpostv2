@@ -35,7 +35,7 @@ export default function ShareModal({ post, onClose }) {
     }
   };
 
-  const shareText = encodeURIComponent(`Check out this post by ${post.authorName} on Moments:\n\n*${post.title}*\n${post.content.slice(0, 50)}...\n\n${shareUrl}`);
+  const shareText = encodeURIComponent(`Check out this post by ${post.authorName} on GoodPost:\n\n*${post.title}*\n${post.content.slice(0, 50)}...\n\n${shareUrl}`);
 
   const socialLinks = [
     {

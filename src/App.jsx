@@ -71,7 +71,7 @@ function App() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black text-white">
         <div className="rounded-[28px] border border-white/10 bg-[#121212]/90 px-6 py-5 text-center shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
-          <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Moments</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">GoodPost</p>
           <h1 className="font-display mt-3 text-2xl text-white">Loading your feed</h1>
         </div>
       </div>

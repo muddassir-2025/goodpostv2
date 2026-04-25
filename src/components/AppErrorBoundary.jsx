@@ -20,7 +20,7 @@ export default class AppErrorBoundary extends Component {
       return (
         <div className="flex min-h-screen items-center justify-center bg-black px-4 text-white">
           <div className="w-full max-w-md rounded-[32px] border border-white/10 bg-[#121212]/92 p-6 text-center shadow-[0_30px_90px_rgba(0,0,0,0.34)]">
-            <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">Moments</p>
+            <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">GoodPost</p>
             <h1 className="font-display mt-4 text-3xl text-white">Something broke in the feed</h1>
             <p className="mt-3 text-sm leading-6 text-zinc-400">
               The page hit a rendering problem. Reloading should usually recover it.
