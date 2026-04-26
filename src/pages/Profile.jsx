@@ -538,7 +538,7 @@ export default function Profile() {
         ) : visiblePosts.length ? (
           <div className="grid grid-cols-3 gap-1 sm:gap-1.5 p-1.5 animate-in fade-in duration-300">
             {visiblePosts.map((post) => {
-              const imageSrc = getFileUrl(post.featuredImg, { width: 400, output: "webp" }); // Added compression
+              const imageSrc = getFileUrl(post.featuredImg, { width: 400 }); // Removed webp for compatibility
               const [g1, g2] = getPostGradient(post.$id);
 
               return (

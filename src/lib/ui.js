@@ -1,4 +1,8 @@
-const endpoint = (import.meta.env.VITE_APPWRITE_ENDPOINT || "").replace(/\/$/, "");
+let rawEndpoint = (import.meta.env.VITE_APPWRITE_ENDPOINT || "").replace(/\/$/, "");
+if (rawEndpoint && !rawEndpoint.endsWith("/v1")) {
+  rawEndpoint += "/v1";
+}
+const endpoint = rawEndpoint;
 const bucketId = import.meta.env.VITE_APPWRITE_BUCKET_ID;
 const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
 

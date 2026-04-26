@@ -42,7 +42,7 @@ export default function PostCard({
   const isOwner = (currentUserId && currentUserId === post.authorID) || isAdmin;
   
   // Optimize image for feed: WebP format, width 800px for quality/size balance
-  const imageSrc = getFileUrl(post.featuredImg, { width: 800, output: "webp" });
+  const imageSrc = getFileUrl(post.featuredImg, { width: 800 });
   const audioSrc = getFileUrl(post.audioId);
   const captionPreview =
     post.content?.length > 150 ? `${post.content.slice(0, 150).trim()}...` : post.content;
