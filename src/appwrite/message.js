@@ -1,4 +1,4 @@
-import { Client, Databases, ID, Query } from "appwrite";
+import { Client, Databases, ID, Query, Permission, Role } from "appwrite";
 
 class MessageService {
   client = new Client();
@@ -261,7 +261,7 @@ class MessageService {
     try {
       const messages = await this.getMessages(conversationId);
       const updatePromises = (messages?.documents || []).map((msg) =>
-        this.databases.deleteDocument(this.databaseId, this.messagesId, msg.$id)
+        this.databases.deleteDocument(this.databaseId, this.messagesId, msg.$id).catch(() => null) // Ignore permission errors on individual messages
       );
       await Promise.all(updatePromises);
 
@@ -284,7 +284,7 @@ class MessageService {
   // ✅ Delete Conversation (hard-clear + mark as deleted)
   async deleteConversation(conversationId) {
     try {
-      await this.clearChat(conversationId);
+      await this.clearChat(conversationId).catch(() => null); // Continue even if clearChat partially fails
       // Delete conversation entirely
       await this.databases.deleteDocument(
         this.databaseId,
