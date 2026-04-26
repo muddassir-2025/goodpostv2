@@ -14,18 +14,15 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('appwrite')) {
-            return 'vendor-appwrite';
-          }
-          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom') || id.includes('react-redux') || id.includes('@reduxjs/toolkit')) {
-            return 'vendor-react';
-          }
-          if (id.includes('@tensorflow/tfjs') || id.includes('nsfwjs')) {
-            return 'vendor-ml';
+          if (id.includes('node_modules')) {
+            if (id.includes('appwrite')) return 'vendor-appwrite';
+            if (id.includes('react') || id.includes('redux') || id.includes('react-router')) return 'vendor-react';
+            if (id.includes('framer-motion')) return 'vendor-framer';
+            return 'vendor-others';
           }
         },
       },
     },
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 600,
   },
 })

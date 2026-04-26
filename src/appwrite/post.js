@@ -15,6 +15,14 @@ class PostService {
     this.storage = new Storage(this.client);
   }
 
+  // ✅ CACHE LAYER
+  cache = new Map();
+  cacheTTL = 30000; // 30 seconds
+
+  invalidateCache() {
+    this.cache.clear();
+  }
+
   // ✅ Create Post
   async createPost({
   title,
@@ -29,7 +37,7 @@ class PostService {
   status = "public", // ✅ received status
 }) {
   try {
-    return await this.databases.createDocument(
+    const result = await this.databases.createDocument(
       import.meta.env.VITE_APPWRITE_DATABASE_ID,
       import.meta.env.VITE_APPWRITE_TABLE_ID,
       ID.unique(),
@@ -39,40 +47,42 @@ class PostService {
         slug,
         authorID: userId,
         authorName: userName,
-
         featuredImg: imageId,
         audioId: audioId,
-
-        tags: tags, // ✅ IMPORTANT FIX
-
-        isPublished: status === "public", // ✅ Use isPublished instead of status
-
+        tags: tags,
+        isPublished: status === "public",
         likeCount: 0,
         commentCount: 0,
-
         isSystem,
-
         reportCount: 0,
         reportedBy: [],
       }
     );
+    this.invalidateCache();
+    return result;
   } catch (error) {
     console.log("create post error ", error);
     throw error;
   }
 }
 
-  // ✅ Get All Posts
   async getPosts(queries = []) {
+    const cacheKey = JSON.stringify(queries);
+    const cached = this.cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
+      return cached.data;
+    }
+
     try {
-      return await this.databases.listDocuments(
+      const data = await this.databases.listDocuments(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_TABLE_ID,
         queries
       );
+      this.cache.set(cacheKey, { data, timestamp: Date.now() });
+      return data;
     } catch (error) {
       console.error("get posts error ", error);
-      // If unauthorized, return empty documents rather than crashing
       if (error?.code === 401 || error?.code === 403) {
         return { documents: [], total: 0 };
       }
@@ -120,11 +130,13 @@ class PostService {
   // ✅ Delete Post (FIXED)
   async deletePost(postId) {
     try {
-      return await this.databases.deleteDocument(
+      const res = await this.databases.deleteDocument(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_TABLE_ID,
         postId
       );
+      this.invalidateCache();
+      return res;
     } catch (error) {
       console.log("delete post error: ", error);
       throw error;
@@ -148,19 +160,19 @@ class PostService {
   async updatePost(postId, data) {
     try {
       const finalData = { ...data };
-
-      // ✅ Map status to isPublished if present
       if (finalData.status) {
         finalData.isPublished = finalData.status === "public";
         delete finalData.status;
       }
 
-      return await this.databases.updateDocument(
+      const res = await this.databases.updateDocument(
         import.meta.env.VITE_APPWRITE_DATABASE_ID,
         import.meta.env.VITE_APPWRITE_TABLE_ID,
         postId,
         finalData
       );
+      this.invalidateCache();
+      return res;
     } catch (error) {
       console.log("updatePost error: ", error);
     }

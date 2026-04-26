@@ -95,11 +95,18 @@ class Authservice {
     }
   }
 
-  // 👤 Current User
+  // 👤 Current User (Cached)
+  userCache = null;
+
   async getCurrentUser() {
+    if (this.userCache) return this.userCache;
+
     try {
-      return await this.account.get();
+      const user = await this.account.get();
+      this.userCache = user;
+      return user;
     } catch {
+      this.userCache = null;
       return null;
     }
   }
@@ -107,8 +114,11 @@ class Authservice {
   // 🚪 Logout
   async logout() {
     try {
-      return await this.account.deleteSession("current");
+      const res = await this.account.deleteSession("current");
+      this.userCache = null;
+      return res;
     } catch (error) {
+      this.userCache = null;
       console.error("logout error:", error);
       throw error;
     }

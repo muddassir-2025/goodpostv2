@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://goodpostv2.vercel.app/sitemap.xml

@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useState, useRef } from "react";
+import { useDeferredValue, useEffect, useState, useRef, useCallback } from "react";
 import { Query } from "appwrite";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -129,7 +129,7 @@ export default function Home() {
     );
   }
 
-  async function handleLikeToggle(post) {
+  const handleLikeToggle = useCallback(async (post) => {
     if (!user) {
       navigate("/login");
       return;
@@ -160,9 +160,9 @@ export default function Home() {
         likeCount: post.likeCount || 0,
       }));
     }
-  }
+  }, [user, navigate]);
 
-  async function handleFavoriteToggle(post) {
+  const handleFavoriteToggle = useCallback(async (post) => {
     if (!user) {
       navigate("/login");
       return;
@@ -196,7 +196,7 @@ export default function Home() {
         favoriteId: post.favoriteId || null,
       }));
     }
-  }
+  }, [user, navigate]);
 
   async function handleDelete(post) {
     try {

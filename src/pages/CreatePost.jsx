@@ -5,7 +5,6 @@ import UploadModal from "../components/UploadModal";
 import { AudioIcon, ImageIcon, ShieldIcon, XIcon } from "../components/ui/Icons";
 import postService from "../appwrite/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
-import * as nsfwjs from "nsfwjs";
 
 export default function CreatePost() {
   const user = useSelector((state) => state.auth.userData);

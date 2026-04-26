@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { memo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import Avatar from "./Avatar";
@@ -24,7 +24,7 @@ import {
   getHandle,
 } from "../lib/ui";
 
-export default function PostCard({
+const PostCard = memo(({
   post,
   currentUserId,
   onToggleLike,
@@ -33,7 +33,7 @@ export default function PostCard({
   onEdit,
   onReport,
   isPriority = false,
-}) {
+}) => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareLabel, setShareLabel] = useState("Share");
@@ -311,4 +311,6 @@ export default function PostCard({
       </div>
     </article>
   );
-}
+});
+
+export default PostCard;
