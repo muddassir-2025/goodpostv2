@@ -156,6 +156,10 @@ export default function Profile() {
         Query.orderDesc("$createdAt"),
       ];
 
+      if (!isOwnProfile) {
+        queries.push(Query.equal("isPublished", true));
+      }
+
       const [feedPosts, favRes] = await Promise.all([
         fetchFeedPosts(currentUser, queries),
         isInitial ? favoriteService.getUSerAllFavorites(currentUser.$id) : Promise.resolve(null),

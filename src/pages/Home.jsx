@@ -52,6 +52,7 @@ export default function Home() {
 
     try {
       const queries = [
+        Query.equal("isPublished", true),
         Query.limit(PAGE_SIZE),
         Query.offset(isInitial ? 0 : posts.length),
         Query.orderDesc("$createdAt"),

@@ -20,11 +20,19 @@ export function getFileUrl(fileId, params = {}) {
     return "";
   }
 
-  let url = `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/preview?project=${projectId}`;
+  // If we have resizing params, use /preview, otherwise use /view
+  const hasParams = Object.keys(params).length > 0;
+  const mode = hasParams ? "preview" : "view";
   
-  Object.entries(params).forEach(([key, value]) => {
-    url += `&${key}=${encodeURIComponent(value)}`;
-  });
+  let url = `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/${mode}?project=${projectId}`;
+  
+  if (hasParams) {
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url += `&${key}=${encodeURIComponent(value)}`;
+      }
+    });
+  }
 
   return url;
 }

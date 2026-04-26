@@ -66,7 +66,7 @@ export default function Search() {
     async function loadPosts() {
       setLoading(true);
       try {
-        const data = await fetchFeedPosts(user);
+        const data = await fetchFeedPosts(user, [Query.equal("isPublished", true)]);
         if (active) setPosts(data);
       } finally {
         if (active) setLoading(false);
