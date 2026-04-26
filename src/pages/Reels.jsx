@@ -8,6 +8,7 @@ import followService from "../appwrite/follow";
 import postService from "../appwrite/post";
 import { syncFavorite, syncLike } from "../lib/engagement";
 import { fetchFeedPosts, sortPosts } from "../lib/posts";
+import { Query } from "appwrite";
 
 const FILTERS = [
   { id: "all",    label: "All"    },
@@ -32,7 +33,7 @@ export default function Feed() {
       setError("");
       try {
         const [data, followingIds] = await Promise.all([
-          fetchFeedPosts(user),
+          fetchFeedPosts(user, [Query.equal("isPublished", true)]),
           followService.getFollowing(user.$id),
         ]);
         const followedSet = new Set(followingIds || []);
