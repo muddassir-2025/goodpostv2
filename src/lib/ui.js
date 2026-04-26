@@ -1,10 +1,11 @@
-let rawEndpoint = (import.meta.env.VITE_APPWRITE_ENDPOINT || "").replace(/\/$/, "");
-if (rawEndpoint && !rawEndpoint.endsWith("/v1")) {
-  rawEndpoint += "/v1";
-}
-const endpoint = rawEndpoint;
-const bucketId = import.meta.env.VITE_APPWRITE_BUCKET_ID;
+import { Client, Storage } from "appwrite";
+
+const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
 const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
+const bucketId = import.meta.env.VITE_APPWRITE_BUCKET_ID;
+
+const client = new Client().setEndpoint(endpoint).setProject(projectId);
+const storage = new Storage(client);
 
 export function normalizeText(value, fallback = "") {
   if (typeof value === "string") {
@@ -24,21 +25,29 @@ export function getFileUrl(fileId, params = {}) {
     return "";
   }
 
-  // If we have resizing params, use /preview, otherwise use /view
-  const hasParams = Object.keys(params).length > 0;
-  const mode = hasParams ? "preview" : "view";
-  
-  let url = `${endpoint}/storage/buckets/${bucketId}/files/${fileId}/${mode}?project=${projectId}`;
-  
-  if (hasParams) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        url += `&${key}=${encodeURIComponent(value)}`;
-      }
-    });
+  try {
+    // The Appwrite SDK's getFilePreview returns a URL object that works perfectly
+    const url = storage.getFilePreview(
+      bucketId,
+      fileId,
+      params.width || undefined,
+      params.height || undefined,
+      params.gravity || undefined,
+      params.quality || undefined,
+      params.borderWidth || undefined,
+      params.borderColor || undefined,
+      params.borderRadius || undefined,
+      params.opacity || undefined,
+      params.rotation || undefined,
+      params.background || undefined,
+      params.output || undefined
+    );
+    
+    return url.toString();
+  } catch (error) {
+    console.error("getFileUrl error:", error);
+    return "";
   }
-
-  return url;
 }
 
 export function getInitials(name = "Guest") {
