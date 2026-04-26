@@ -45,6 +45,7 @@ export default function SinglePost() {
   const [shareOpen, setShareOpen] = useState(false);
   const audioPlayerRef = useRef(null);
   const [activeSeek, setActiveSeek] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -279,15 +280,14 @@ export default function SinglePost() {
   }
 
   async function handleAddComment() {
-    if (!user) {
-      navigate("/login");
+    if (!user || isSubmitting) {
+      if (!user) navigate("/login");
       return;
     }
+    
+    if (!newComment.trim()) return;
 
-    if (!newComment.trim()) {
-      return;
-    }
-
+    setIsSubmitting(true);
     try {
       await commentService.createComment({
         postId: post.$id,
@@ -305,6 +305,8 @@ export default function SinglePost() {
       setNewComment("");
     } catch {
       setError("Comment could not be posted.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -531,6 +533,7 @@ export default function SinglePost() {
             setEditText("");
           }}
           onDelete={handleDeleteComment}
+          isSubmitting={isSubmitting}
         />
       </div>
 

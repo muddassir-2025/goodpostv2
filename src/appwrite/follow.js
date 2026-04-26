@@ -24,71 +24,86 @@ class FollowService {
 
 
 async followUser(followerId, followingId, followerName) {
-  const existing = await this.isFollowing(followerId, followingId);
-  if (existing) return null;
+  try {
+    const existing = await this.isFollowing(followerId, followingId);
+    if (existing) return null;
 
-  const res = await this.databases.createDocument(
-    this.databaseId,
-    this.followsCollectionId,
-    ID.unique(),
-    {
-      followerId,
-      followingId,
-    },
-    [
-      Permission.read(Role.user(followerId)),
-      Permission.delete(Role.user(followerId)),
-    ]
-  );
+    const res = await this.databases.createDocument(
+      this.databaseId,
+      this.followsCollectionId,
+      ID.unique(),
+      {
+        followerId,
+        followingId,
+      },
+      [
+        Permission.read(Role.user(followerId)),
+        Permission.delete(Role.user(followerId)),
+      ]
+    );
 
-  // ✅ NOTIFY TARGET USER
-  import("./notification").then(({ default: notificationService }) => {
-    notificationService.createNotification({
-      userId: followingId,
-      actorId: followerId,
-      actorName: followerName,
-      type: "follow",
+    // ✅ NOTIFY TARGET USER
+    import("./notification").then(({ default: notificationService }) => {
+      notificationService.createNotification({
+        userId: followingId,
+        actorId: followerId,
+        actorName: followerName,
+        type: "follow",
+      });
     });
-  });
 
-  return res;
+    return res;
+  } catch (error) {
+    console.error("followUser error:", error);
+    throw error;
+  }
 }
 
   async unfollowUser(followerId, followingId) {
-    const response = await this.databases.listDocuments(
-      this.databaseId,
-      this.followsCollectionId,
-      [
-        Query.equal("followerId", followerId),
-        Query.equal("followingId", followingId),
-      ],
-    );
+    try {
+      const response = await this.databases.listDocuments(
+        this.databaseId,
+        this.followsCollectionId,
+        [
+          Query.equal("followerId", followerId),
+          Query.equal("followingId", followingId),
+        ],
+      );
 
-    const docId = response?.documents?.[0]?.$id;
+      const docId = response?.documents?.[0]?.$id;
 
-    if (!docId) {
-      return null;
+      if (!docId) {
+        return null;
+      }
+
+      return await this.databases.deleteDocument(
+        this.databaseId,
+        this.followsCollectionId,
+        docId,
+      );
+    } catch (error) {
+      console.error("unfollowUser error:", error);
+      throw error;
     }
-
-    return this.databases.deleteDocument(
-      this.databaseId,
-      this.followsCollectionId,
-      docId,
-    );
   }
 
   async isFollowing(followerId, followingId) {
-    const response = await this.databases.listDocuments(
-      this.databaseId,
-      this.followsCollectionId,
-      [
-        Query.equal("followerId", followerId),
-        Query.equal("followingId", followingId),
-        Query.limit(1),
-      ],
-    );
+    try {
+      const response = await this.databases.listDocuments(
+        this.databaseId,
+        this.followsCollectionId,
+        [
+          Query.equal("followerId", followerId),
+          Query.equal("followingId", followingId),
+          Query.limit(1),
+        ],
+      );
 
-    return (response?.documents?.length || 0) > 0;
+      return (response?.documents?.length || 0) > 0;
+    } catch (error) {
+      console.error("isFollowing error:", error);
+      return false;
+    }
   }
 
   async getFollowersCount(userId) {

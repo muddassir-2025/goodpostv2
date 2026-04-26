@@ -15,6 +15,7 @@ export default function CommentSection({
   onEditSave,
   onEditCancel,
   onDelete,
+  isSubmitting,
 }) {
   const isAdmin = useSelector((state) => state.auth.isAdmin);
 
@@ -41,8 +42,27 @@ export default function CommentSection({
           />
           {value.trim() && (
             <div className="flex justify-end gap-2 mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
-              <button onClick={() => onChange("")} className="text-xs font-bold text-white px-3 py-1.5 hover:bg-white/5 rounded-full transition">Cancel</button>
-              <button onClick={() => onSubmit(value)} className="text-xs font-bold text-black bg-blue-400 px-4 py-1.5 rounded-full hover:bg-blue-300 transition">Comment</button>
+              <button 
+                onClick={() => onChange("")} 
+                disabled={isSubmitting}
+                className="text-xs font-bold text-white px-3 py-1.5 hover:bg-white/5 rounded-full transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => onSubmit(value)} 
+                disabled={isSubmitting}
+                className="text-xs font-bold text-black bg-blue-400 px-4 py-1.5 rounded-full hover:bg-blue-300 transition disabled:bg-blue-300/50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="h-3 w-3 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                    Posting...
+                  </>
+                ) : (
+                  "Comment"
+                )}
+              </button>
             </div>
           )}
         </div>
