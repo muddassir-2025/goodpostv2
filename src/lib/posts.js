@@ -1,3 +1,4 @@
+import { Query } from "appwrite";
 import favoriteService from "../appwrite/favorite";
 import likeService from "../appwrite/like";
 import postService from "../appwrite/post";

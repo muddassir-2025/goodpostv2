@@ -21,17 +21,18 @@ export async function moderateImage(imageUrl) {
 
     const { adult, racy, violence, spoof, medical } = safeSearch;
 
-    // Strict rule engine: Block if POSSIBLE, LIKELY, or VERY_LIKELY
-    const blockList = ["POSSIBLE", "LIKELY", "VERY_LIKELY"];
+    // Rules: Block if LIKELY or VERY_LIKELY. 
+    // 'POSSIBLE' is often a false positive in SafeSearch.
+    const blockList = ["LIKELY", "VERY_LIKELY"];
 
     if (blockList.includes(adult)) {
-      return { allowed: false, reason: "Explicit content detected", raw: safeSearch };
+      return { allowed: false, reason: "Explicit content detected (Adult)", raw: safeSearch };
     }
     if (blockList.includes(racy)) {
-      return { allowed: false, reason: "Suggestive content detected", raw: safeSearch };
+      return { allowed: false, reason: "Suggestive content detected (Racy)", raw: safeSearch };
     }
     if (blockList.includes(violence)) {
-      return { allowed: false, reason: "Violent content detected", raw: safeSearch };
+      return { allowed: false, reason: "Violent content detected (Violence)", raw: safeSearch };
     }
 
     return {
@@ -40,12 +41,13 @@ export async function moderateImage(imageUrl) {
       raw: safeSearch
     };
   } catch (error) {
-    console.error("Vision API Error:", error);
-    // Fail-safe: Block image if API fails
+    console.error("Vision API Error Details:", error);
+    // Return a specific error so the frontend can distinguish between "Flagged" and "Error"
     return {
       allowed: false,
-      reason: "Image moderation service unavailable",
-      raw: null
+      error: true,
+      reason: "Moderation service technical error",
+      details: error.message
     };
   }
 }

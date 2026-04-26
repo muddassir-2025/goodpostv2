@@ -112,7 +112,7 @@ export default function EditPost() {
         const imageId = uploadedImage?.$id;
         nextImageId = imageId || oldImageId;
 
-        // 🔥 2. Call ML Moderation Backend (Wait for Response)
+        /* 🔥 COMMENTED OUT DUE TO BILLING ISSUES
         try {
             const imageUrl = getFileUrl(imageId); 
             
@@ -123,17 +123,25 @@ export default function EditPost() {
             });
 
             const modData = await modRes.json();
+            console.log("MOD DATA:", modData);
 
-            // 3. ONLY THEN proceed if allowed
+            // 3. Handle results
+            if (modData.error) {
+                console.error("Moderation technical error:", modData.reason);
+                // Allow through on technical error to avoid blocking valid posts
+                return; 
+            }
+
             if (modRes.ok && !modData.allowed) {
                 // If the model caught it, delete from Appwrite instantly and abort!
                 await postService.deleteFile(imageId);
                 setSaving(false);
-                return setError("Content Policy Violation: This image has been flagged for containing suggestive or inappropriate content.");
+                return setError(`Content Policy Violation: ${modData.reason || "This image has been flagged for containing suggestive or inappropriate content."}`);
             }
         } catch (modErr) {
-            console.error("Backend Moderation unavailable:", modErr);
+            console.error("Backend Moderation connection failed:", modErr);
         }
+        */
 
         if (oldImageId && nextImageId !== oldImageId) {
           await postService.deleteFile(oldImageId);

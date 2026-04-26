@@ -71,7 +71,12 @@ class PostService {
         queries
       );
     } catch (error) {
-      console.log("get posts error ", error);
+      console.error("get posts error ", error);
+      // If unauthorized, return empty documents rather than crashing
+      if (error?.code === 401 || error?.code === 403) {
+        return { documents: [], total: 0 };
+      }
+      throw error;
     }
   }
 

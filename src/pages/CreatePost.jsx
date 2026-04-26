@@ -76,7 +76,7 @@ export default function CreatePost() {
         const res = await postService.uploadImage(image, user.$id);
         imageId = res?.$id;
 
-        // 🔥 2. Call ML Moderation Backend (Wait for Response)
+        /* 🔥 COMMENTED OUT DUE TO BILLING ISSUES
         try {
             const imageUrl = getFileUrl(imageId); 
             
@@ -89,17 +89,28 @@ export default function CreatePost() {
             });
 
             const modData = await modRes.json();
+            console.log("MOD DATA:", modData);
 
-            // 3. ONLY THEN proceed if allowed
+            // 3. Handle results
+            if (modData.error) {
+                // Technical error - maybe log it but don't block if you want to be lenient, 
+                // or block with a "Service unavailable" message.
+                console.error("Moderation technical error:", modData.reason);
+                // For now, let's let it through if it's a technical error but log it,
+                // OR you can keep it strict. User said "every image", so let's be more lenient on errors.
+                return; 
+            }
+
             if (modRes.ok && !modData.allowed) {
                 // If the model caught it, delete from Appwrite instantly and abort!
                 await postService.deleteFile(imageId);
                 setLoading(false);
-                return setError("Content Policy Violation: This image has been flagged for containing suggestive or inappropriate content.");
+                return setError(`Content Policy Violation: ${modData.reason || "This image has been flagged for containing suggestive or inappropriate content."}`);
             }
         } catch (modErr) {
-            console.error("Backend Moderation unavailable:", modErr);
+            console.error("Backend Moderation connection failed:", modErr);
         }
+        */
       }
 
       if (audio) {

@@ -92,49 +92,65 @@ async followUser(followerId, followingId, followerName) {
   }
 
   async getFollowersCount(userId) {
-    const response = await this.databases.listDocuments(
-      this.databaseId,
-      this.followsCollectionId,
-      [Query.equal("followingId", userId)],
-    );
-
-    return response?.total || 0;
+    try {
+      const response = await this.databases.listDocuments(
+        this.databaseId,
+        this.followsCollectionId,
+        [Query.equal("followingId", userId)],
+      );
+      return response?.total || 0;
+    } catch (error) {
+      console.error("getFollowersCount error:", error);
+      return 0;
+    }
   }
 
   async getFollowingCount(userId) {
-    const response = await this.databases.listDocuments(
-      this.databaseId,
-      this.followsCollectionId,
-      [Query.equal("followerId", userId)],
-    );
-
-    return response?.total || 0;
+    try {
+      const response = await this.databases.listDocuments(
+        this.databaseId,
+        this.followsCollectionId,
+        [Query.equal("followerId", userId)],
+      );
+      return response?.total || 0;
+    } catch (error) {
+      console.error("getFollowingCount error:", error);
+      return 0;
+    }
   }
 
   async getFollowing(userId) {
-    const response = await this.databases.listDocuments(
-      this.databaseId,
-      this.followsCollectionId,
-      [
-        Query.equal("followerId", userId),
-        Query.limit(1000),
-      ],
-    );
-
-    return (response?.documents || []).map((doc) => doc.followingId);
+    try {
+      const response = await this.databases.listDocuments(
+        this.databaseId,
+        this.followsCollectionId,
+        [
+          Query.equal("followerId", userId),
+          Query.limit(1000),
+        ],
+      );
+      return (response?.documents || []).map((doc) => doc.followingId);
+    } catch (error) {
+      console.error("getFollowing error:", error);
+      return [];
+    }
   }
 
   async getFollowers(userId) {
-    const response = await this.databases.listDocuments(
-      this.databaseId,
-      this.followsCollectionId,
-      [
-        Query.equal("followingId", userId),
-        Query.limit(1000),
-      ],
-    );
-
-    return (response?.documents || []).map((doc) => doc.followerId);
+    try {
+      const response = await this.databases.listDocuments(
+        this.databaseId,
+        this.followsCollectionId,
+        [
+          Query.equal("followingId", userId),
+          Query.limit(1000),
+        ],
+      );
+      return (response?.documents || []).map((doc) => doc.followerId);
+    } catch (error) {
+      console.error("getFollowers error:", error);
+      return [];
+    }
   }
 }
 
