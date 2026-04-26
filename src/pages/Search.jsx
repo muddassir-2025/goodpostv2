@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Query } from "appwrite";
 import { useDebounce } from "../hooks/useDebounce";
 
 import EmptyState from "../components/EmptyState";
