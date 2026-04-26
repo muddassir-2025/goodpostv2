@@ -68,11 +68,13 @@ export default function Notifications() {
 
         setNotifications(merged);
 
-        // Mark regular notifications as read after 2 seconds
+        // Optimistically mark all regular notifications as read locally
         if (regularNotifs.some(n => !n.isRead)) {
-          setTimeout(() => {
-            if (active) notificationService.markAllAsRead(user.$id);
-          }, 2000);
+          setNotifications(prev => 
+            prev.map(n => n.type !== 'chat' ? { ...n, isRead: true } : n)
+          );
+          // Mark as read in the database immediately
+          notificationService.markAllAsRead(user.$id);
         }
       } catch (error) {
         console.error("Failed to load notifications:", error);

@@ -43,7 +43,8 @@ class NotificationService {
         },
         [
           Permission.read(Role.any()), 
-          Permission.write(Role.user(actorId)),
+          Permission.write(Role.user(userId)), // Receiver can mark as read & delete
+          Permission.write(Role.user(actorId)), // Sender can delete (e.g., if they unlike)
         ]
       );
     } catch (error) {

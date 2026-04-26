@@ -5,10 +5,13 @@ import UploadModal from "../components/UploadModal";
 import { AudioIcon, ImageIcon, ShieldIcon, XIcon } from "../components/ui/Icons";
 import postService from "../appwrite/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
+import { useNSFW } from "../hooks/useNSFW";
+import { toast } from "../confirmService";
 
 export default function CreatePost() {
   const user = useSelector((state) => state.auth.userData);
   const navigate = useNavigate();
+  const { checkImage, isChecking } = useNSFW();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -71,45 +74,22 @@ export default function CreatePost() {
       let audioId = null;
 
       if (image) {
-        // 1. Upload to Appwrite FIRST to generate a public URL
+        // 🔥 ULTRA-OPTIMIZED NSFW CHECK
+        const checkResponse = await checkImage(image);
+        
+        if (!checkResponse.safe) {
+          setLoading(false);
+          if (checkResponse.error) {
+             console.error("Worker error:", checkResponse.error);
+             return setError(`Image check failed: ${checkResponse.error}`);
+          }
+          const reason = checkResponse.results?.Porn > 0.7 ? "Explicit content detected." : "Inappropriate content detected.";
+          return setError(`Content Policy Violation: ${reason}`);
+        }
+
+        // 1. Upload to Appwrite if SAFE
         const res = await postService.uploadImage(image, user.$id);
         imageId = res?.$id;
-
-        /* 🔥 COMMENTED OUT DUE TO BILLING ISSUES
-        try {
-            const imageUrl = getFileUrl(imageId); 
-            
-            // Use environment variable for production, fallback to relative path for local proxy
-            const apiUrl = import.meta.env.VITE_MODERATION_API_URL || "";
-            const modRes = await fetch(`${apiUrl}/moderate-image`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ imageUrl })
-            });
-
-            const modData = await modRes.json();
-            console.log("MOD DATA:", modData);
-
-            // 3. Handle results
-            if (modData.error) {
-                // Technical error - maybe log it but don't block if you want to be lenient, 
-                // or block with a "Service unavailable" message.
-                console.error("Moderation technical error:", modData.reason);
-                // For now, let's let it through if it's a technical error but log it,
-                // OR you can keep it strict. User said "every image", so let's be more lenient on errors.
-                return; 
-            }
-
-            if (modRes.ok && !modData.allowed) {
-                // If the model caught it, delete from Appwrite instantly and abort!
-                await postService.deleteFile(imageId);
-                setLoading(false);
-                return setError(`Content Policy Violation: ${modData.reason || "This image has been flagged for containing suggestive or inappropriate content."}`);
-            }
-        } catch (modErr) {
-            console.error("Backend Moderation connection failed:", modErr);
-        }
-        */
       }
 
       if (audio) {
@@ -354,10 +334,10 @@ export default function CreatePost() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || isChecking}
               className="w-full rounded-full bg-zinc-100 px-5 py-3 text-sm font-semibold !text-zinc-950 transition hover:bg-zinc-200 disabled:opacity-60"
             >
-              {loading ? "Publishing..." : "Publish post"}
+              {isChecking ? "Checking image..." : loading ? "Publishing..." : "Publish post"}
             </button>
           </div>
         </form>

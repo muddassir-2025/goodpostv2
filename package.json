@@ -12,9 +12,11 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.2",
     "@tailwindcss/vite": "^4.2.2",
+    "@tensorflow/tfjs": "^4.22.0",
     "appwrite": "^24.1.1",
     "framer-motion": "^12.38.0",
     "html-react-parser": "^6.0.1",
+    "nsfwjs": "^4.3.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.72.1",

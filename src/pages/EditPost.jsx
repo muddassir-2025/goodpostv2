@@ -6,11 +6,13 @@ import UploadModal from "../components/UploadModal";
 import { AudioIcon, ImageIcon } from "../components/ui/Icons";
 import postService from "../appwrite/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
+import { useNSFW } from "../hooks/useNSFW";
 
 export default function EditPost() {
   const { id } = useParams();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.userData);
+  const { checkImage, isChecking } = useNSFW();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -108,40 +110,22 @@ export default function EditPost() {
       let nextAudioId = oldAudioId;
 
       if (image) {
+        // 🔥 ULTRA-OPTIMIZED NSFW CHECK
+        const checkResponse = await checkImage(image);
+        
+        if (!checkResponse.safe) {
+          setSaving(false);
+          if (checkResponse.error) {
+             console.error("Worker error:", checkResponse.error);
+             return setError(`Image check failed: ${checkResponse.error}`);
+          }
+          const reason = checkResponse.results?.Porn > 0.7 ? "Explicit content detected." : "Inappropriate content detected.";
+          return setError(`Content Policy Violation: ${reason}`);
+        }
+
         const uploadedImage = await postService.uploadImage(image, user?.$id);
         const imageId = uploadedImage?.$id;
         nextImageId = imageId || oldImageId;
-
-        /* 🔥 COMMENTED OUT DUE TO BILLING ISSUES
-        try {
-            const imageUrl = getFileUrl(imageId); 
-            
-            const modRes = await fetch("http://localhost:3000/api/moderate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ imageUrl })
-            });
-
-            const modData = await modRes.json();
-            console.log("MOD DATA:", modData);
-
-            // 3. Handle results
-            if (modData.error) {
-                console.error("Moderation technical error:", modData.reason);
-                // Allow through on technical error to avoid blocking valid posts
-                return; 
-            }
-
-            if (modRes.ok && !modData.allowed) {
-                // If the model caught it, delete from Appwrite instantly and abort!
-                await postService.deleteFile(imageId);
-                setSaving(false);
-                return setError(`Content Policy Violation: ${modData.reason || "This image has been flagged for containing suggestive or inappropriate content."}`);
-            }
-        } catch (modErr) {
-            console.error("Backend Moderation connection failed:", modErr);
-        }
-        */
 
         if (oldImageId && nextImageId !== oldImageId) {
           await postService.deleteFile(oldImageId);
@@ -372,10 +356,10 @@ export default function EditPost() {
 
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || isChecking}
               className="w-full rounded-full bg-zinc-100 px-5 py-3 text-sm font-semibold !text-zinc-950 transition hover:bg-zinc-200 hover:!text-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {saving ? "Saving..." : "Save changes"}
+              {isChecking ? "Checking image..." : saving ? "Saving..." : "Save changes"}
             </button>
           </div>
         </form>

@@ -5,6 +5,10 @@ import confirmReducer from "../features/error/confirmSlice";
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    confirm: confirmReducer, // ✅ add this
+    confirm: confirmReducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: false,
+    }),
 });
