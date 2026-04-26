@@ -20,29 +20,16 @@ export function normalizeText(value, fallback = "") {
   return fallback;
 }
 
-export function getFileUrl(fileId, params = {}) {
+export function getFileUrl(fileId) {
   if (!fileId || !endpoint || !bucketId || !projectId) {
     return "";
   }
 
   try {
-    // The Appwrite SDK's getFilePreview returns a URL object that works perfectly
-    const url = storage.getFilePreview(
-      bucketId,
-      fileId,
-      params.width || undefined,
-      params.height || undefined,
-      params.gravity || undefined,
-      params.quality || undefined,
-      params.borderWidth || undefined,
-      params.borderColor || undefined,
-      params.borderRadius || undefined,
-      params.opacity || undefined,
-      params.rotation || undefined,
-      params.background || undefined,
-      params.output || undefined
-    );
-    
+    // We use getFileView instead of getFilePreview because image transformations 
+    // (resizing, cropping) are blocked on your current Appwrite plan.
+    // getFileView returns the original file URL without transformations.
+    const url = storage.getFileView(bucketId, fileId);
     return url.toString();
   } catch (error) {
     console.error("getFileUrl error:", error);
