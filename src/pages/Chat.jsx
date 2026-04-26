@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { confirm } from "../confirmService";
+import { confirm, toast } from "../confirmService";
 import { ID } from "appwrite";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -69,7 +69,7 @@ export default function Chat() {
 
         // Mark as seen if we have unread messages and we didn't send the last one
         if (conv.unreadCount > 0) {
-           const lastMsg = msgs.documents[0];
+           const lastMsg = msgs?.documents?.[0];
            if (lastMsg && lastMsg.senderId !== user.$id) {
              await messageService.markSeen(conversationId);
            }
@@ -155,6 +155,7 @@ export default function Chat() {
       setMessages(prev => prev.map(m => m.$id === tempId ? actualMsg : m));
     } catch (err) {
       console.error("Failed to send", err);
+      toast("Failed to send message: " + err.message, "error");
       // Remove temp message on failure
       setMessages(prev => prev.filter(m => m.$id !== tempId));
     } finally {

@@ -61,7 +61,7 @@ export default function Messages() {
           if (actualUnread > 0) {
             // Check if we were the sender
             const msgs = await messageService.getMessages(conv.$id, 1);
-            const lastMsg = msgs.documents[0];
+            const lastMsg = msgs?.documents?.[0];
             if (lastMsg && lastMsg.senderId === user.$id) {
                actualUnread = 0;
             }

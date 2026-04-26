@@ -88,7 +88,15 @@ class MessageService {
           lastMessage: "",
           lastMessageAt: new Date().toISOString(),
           unreadCount: 0,
-        }
+        },
+        [
+          Permission.read(Role.user(members[0])),
+          Permission.read(Role.user(members[1])),
+          Permission.update(Role.user(members[0])),
+          Permission.update(Role.user(members[1])),
+          Permission.delete(Role.user(members[0])),
+          Permission.delete(Role.user(members[1])),
+        ]
       );
     } catch (error) {
       console.log("createConversation error:", error);
@@ -128,22 +136,31 @@ class MessageService {
           text,
           createdAt: now,
           seen: false,
-        }
+        },
+        [
+          Permission.read(Role.users()),
+          Permission.update(Role.user(senderId)),
+          Permission.delete(Role.user(senderId)),
+        ]
       );
 
       // Update conversation's last message info
-      const conversation = await this.getConversation(conversationId);
-      if (conversation) {
-        await this.databases.updateDocument(
-          this.databaseId,
-          this.conversationsId,
-          conversationId,
-          {
-            lastMessage: text,
-            lastMessageAt: now,
-            unreadCount: (conversation.unreadCount || 0) + 1,
-          }
-        );
+      try {
+        const conversation = await this.getConversation(conversationId);
+        if (conversation) {
+          await this.databases.updateDocument(
+            this.databaseId,
+            this.conversationsId,
+            conversationId,
+            {
+              lastMessage: text,
+              lastMessageAt: now,
+              unreadCount: (conversation.unreadCount || 0) + 1,
+            }
+          );
+        }
+      } catch (convErr) {
+        console.warn("Could not update conversation doc (likely DLS permissions on old chat):", convErr);
       }
 
       return message;
