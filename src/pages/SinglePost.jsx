@@ -199,8 +199,9 @@ export default function SinglePost() {
       return;
     }
 
-    const previous = { saved: post.saved, favoriteId: post.favoriteId };
-    const nextSaved = !post.saved;
+    const currentSavedState = post.saved;
+    const currentFavoriteId = post.favoriteId;
+    const nextSaved = !currentSavedState;
 
     setPost((current) => ({
       ...current,
@@ -212,8 +213,8 @@ export default function SinglePost() {
       const result = await syncFavorite({
         postId: post.$id,
         userId: user.$id,
-        currentlySaved: previous.saved,
-        favoriteId: previous.favoriteId,
+        currentlySaved: currentSavedState,
+        favoriteId: currentFavoriteId,
       });
 
       setPost((current) => ({
@@ -221,11 +222,12 @@ export default function SinglePost() {
         saved: result.saved,
         favoriteId: result.favoriteId,
       }));
-    } catch {
+    } catch (err) {
+      console.error("Save failed:", err);
       setPost((current) => ({
         ...current,
-        saved: previous.saved,
-        favoriteId: previous.favoriteId,
+        saved: currentSavedState,
+        favoriteId: currentFavoriteId,
       }));
     }
   }

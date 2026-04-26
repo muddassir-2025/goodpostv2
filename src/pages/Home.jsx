@@ -172,7 +172,7 @@ export default function Home() {
 
     updatePost(post.$id, (current) => ({
       ...current,
-      liked: nextSaved,
+      saved: nextSaved,
       favoriteId: nextSaved ? current.favoriteId : null,
     }));
 

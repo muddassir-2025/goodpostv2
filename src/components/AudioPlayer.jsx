@@ -17,14 +17,14 @@ const AudioPlayer = forwardRef(({ src, title }, ref) => {
   useImperativeHandle(ref, () => ({
     skipForward: () => {
       if (!audioRef.current) return;
-      audioRef.current.currentTime = Math.min(audioRef.current.currentTime + 5, audioRef.current.duration || 0);
+      audioRef.current.currentTime += 5;
       setCurrentTime(audioRef.current.currentTime);
       setSeekFeedback({ type: "forward" });
       setTimeout(() => setSeekFeedback(null), 600);
     },
     skipBackward: () => {
       if (!audioRef.current) return;
-      audioRef.current.currentTime = Math.max(audioRef.current.currentTime - 5, 0);
+      audioRef.current.currentTime -= 5;
       setCurrentTime(audioRef.current.currentTime);
       setSeekFeedback({ type: "backward" });
       setTimeout(() => setSeekFeedback(null), 600);
@@ -117,10 +117,10 @@ const AudioPlayer = forwardRef(({ src, title }, ref) => {
     const isRight = x > rect.width / 2;
 
     if (isRight) {
-      audioRef.current.currentTime = Math.min(audioRef.current.currentTime + 5, duration);
+      audioRef.current.currentTime += 5;
       setSeekFeedback({ type: "forward", x: e.clientX, y: e.clientY });
     } else {
-      audioRef.current.currentTime = Math.max(audioRef.current.currentTime - 5, 0);
+      audioRef.current.currentTime -= 5;
       setSeekFeedback({ type: "backward", x: e.clientX, y: e.clientY });
     }
     setCurrentTime(audioRef.current.currentTime);

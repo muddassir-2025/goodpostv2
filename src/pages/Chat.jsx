@@ -69,7 +69,10 @@ export default function Chat() {
 
         // Mark as seen if we have unread messages and we didn't send the last one
         if (conv.unreadCount > 0) {
-           await messageService.markSeen(conversationId);
+           const lastMsg = msgs.documents[0];
+           if (lastMsg && lastMsg.senderId !== user.$id) {
+             await messageService.markSeen(conversationId);
+           }
         }
 
       } catch (err) {
