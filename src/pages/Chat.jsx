@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { confirm, toast } from "../confirmService";
-import { ID } from "appwrite";
+import { ID, Query } from "appwrite";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
@@ -252,7 +252,7 @@ export default function Chat() {
               </div>
             </Link>
             
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2 relative">
               {/* Minimalist Search Toggle */}
               <button 
                 onClick={() => { setSearchOpen(!searchOpen); if (searchOpen) setChatSearchQuery(""); }}
@@ -260,24 +260,45 @@ export default function Chat() {
               >
                 <SearchIcon className="h-4 w-4" />
               </button>
- 
-              <button 
-                type="button"
-                onClick={handleClearChat}
-                className="p-2 rounded-full text-white/40 hover:bg-white/10 hover:text-white transition-colors"
-                title="Clear Chat"
-              >
-                <TrashIcon className="h-4 w-4" />
-              </button>
 
-              <button 
-                type="button"
-                onClick={handleDeleteConversation}
-                className="p-2 rounded-full text-rose-500/60 hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
-                title="Delete Chat"
-              >
-                <CloseIcon className="h-4 w-4" />
-              </button>
+              {/* Chat Options Dropdown */}
+              <div className="relative">
+                <button 
+                  onClick={() => setMenuOpenId(menuOpenId === "chat-options" ? null : "chat-options")}
+                  className={`p-2 rounded-full transition-colors ${menuOpenId === "chat-options" ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/10 hover:text-white"}`}
+                >
+                  <DotsIcon className="h-4 w-4" />
+                </button>
+
+                <AnimatePresence>
+                  {menuOpenId === "chat-options" && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className="absolute right-0 top-full mt-2 w-48 rounded-2xl border border-white/[0.08] bg-[#1a1a1c]/95 backdrop-blur-2xl p-1.5 shadow-2xl z-50"
+                    >
+                      <button 
+                        onClick={(e) => { setMenuOpenId(null); handleClearChat(e); }}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white transition"
+                      >
+                        <TrashIcon className="h-4 w-4 opacity-70" />
+                        Clear Chat
+                      </button>
+                      
+                      <div className="my-1 h-px w-full bg-white/[0.06]" />
+                      
+                      <button 
+                        onClick={(e) => { setMenuOpenId(null); handleDeleteConversation(e); }}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-rose-500 hover:bg-rose-500/10 transition"
+                      >
+                        <CloseIcon className="h-4 w-4 opacity-70" />
+                        Delete Chat
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         ) : null}
