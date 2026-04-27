@@ -52,7 +52,8 @@ export default function Chat() {
         if (!active || !conv) return;
 
         setConversation(conv);
-        setMessages(msgs.documents || []);
+        // getMessages returns newest-first, but we need oldest-first for the chat UI
+        setMessages([...(msgs.documents || [])].reverse());
 
         // Get other user info (targeted query instead of fetching all posts)
         const otherId = conv.members.find(id => id !== user.$id);
