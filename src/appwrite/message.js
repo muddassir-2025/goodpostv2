@@ -88,15 +88,7 @@ class MessageService {
           lastMessage: "",
           lastMessageAt: new Date().toISOString(),
           unreadCount: 0,
-        },
-        [
-          Permission.read(Role.user(members[0])),
-          Permission.read(Role.user(members[1])),
-          Permission.update(Role.user(members[0])),
-          Permission.update(Role.user(members[1])),
-          Permission.delete(Role.user(members[0])),
-          Permission.delete(Role.user(members[1])),
-        ]
+        }
       );
     } catch (error) {
       console.log("createConversation error:", error);
@@ -136,12 +128,7 @@ class MessageService {
           text,
           createdAt: now,
           seen: false,
-        },
-        [
-          Permission.read(Role.users()),
-          Permission.update(Role.user(senderId)),
-          Permission.delete(Role.user(senderId)),
-        ]
+        }
       );
 
       // Update conversation's last message info
