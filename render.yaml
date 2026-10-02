@@ -5,9 +5,9 @@ services:
     runtime: node
     plan: free
     rootDir: server
-    # Migrations are idempotent (schema_migrations + IF NOT EXISTS) and must run before
-    # the new code starts, so they are part of the build.
-    buildCommand: npm install && npm run migrate
+    # Migrations are run separately (`npm run migrate`) rather than in the build: a DB
+    # hiccup during the build would otherwise block the deploy entirely.
+    buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /health
     envVars:
