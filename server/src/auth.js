@@ -2,12 +2,21 @@ import { jwtVerify, createRemoteJWKSet } from "jose";
 import { env } from "./env.js";
 import { one, query } from "./db.js";
 
+/**
+ * Neon Auth exposes its keys at `<NEON_AUTH_BASE_URL>/.well-known/jwks.json`.
+ * Build this by string concatenation, NOT `new URL("/...", base)` — a leading
+ * slash resolves against the host root and silently drops the `/neondb/auth`
+ * path segment, which 404s and makes every token fail verification.
+ */
+export function jwksUrl() {
+  return `${env.neonAuthBaseUrl}/.well-known/jwks.json`;
+}
+
 let jwks = null;
 function getJwks() {
   if (!jwks) {
     if (!env.neonAuthBaseUrl) throw new Error("NEON_AUTH_BASE_URL is not configured");
-    const url = new URL("/.well-known/jwks.json", env.neonAuthBaseUrl);
-    jwks = createRemoteJWKSet(url);
+    jwks = createRemoteJWKSet(new URL(jwksUrl()));
   }
   return jwks;
 }
