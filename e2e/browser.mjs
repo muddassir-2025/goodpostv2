@@ -252,11 +252,14 @@ try {
   /* ------------------------------------------------------- image renders */
   section("uploaded image renders in the feed");
   await A.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-  // Wait for at least one storage image to finish loading rather than a fixed delay:
-  // a 6s wait was sometimes too short and reported zero loaded images.
+  // Wait for the feed itself, not just any storage image: the story bar loads images from
+  // storage too, so waiting on an image alone could resolve before a single post card
+  // rendered. Require both an <article> and a loaded storage image.
   await A.waitForFunction(
-    () => Array.from(document.images).some((i) => i.complete && i.currentSrc.includes("storage")),
-    { timeout: 15000 },
+    () =>
+      document.querySelectorAll("article").length > 0 &&
+      Array.from(document.images).some((i) => i.complete && i.currentSrc.includes("storage")),
+    { timeout: 20000 },
   ).catch(() => {});
 
   // Only assert on images that finished loading (complete) so lazy/offscreen images
