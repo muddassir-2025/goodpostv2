@@ -23,19 +23,14 @@ import {
 import postService from "../services/post";
 import { fetchFeedPosts, sortPosts, rankPostsForYou } from "../lib/posts";
 import { getFileUrl, getHandle, formatRelativeTime } from "../lib/ui";
+import { CATEGORIES as TOPIC_CATEGORIES } from "../lib/categories";
 
+// Pinned discovery modes first, then the generic topic list. Topics come from the shared
+// source of truth, so adding one needs no change here.
 const CATEGORIES = [
   { id: "for-you", label: "For You", emoji: "✦" },
   { id: "trending", label: "Trending", emoji: "↑" },
-  { id: "islamic", label: "Islamic", emoji: "☽" },
-  { id: "quran", label: "Quran", emoji: "◈" },
-  { id: "knowledge", label: "Knowledge", emoji: "◉" },
-  { id: "memes", label: "Memes", emoji: "◎" },
-  { id: "audio", label: "Audio", emoji: "♪" },
-  { id: "art", label: "Art", emoji: "◇" },
-  { id: "sports", label: "Sports", emoji: "◆" },
-  { id: "travel", label: "Travel", emoji: "◈" },
-  { id: "other", label: "Other", emoji: "•" },
+  ...TOPIC_CATEGORIES,
 ];
 
 

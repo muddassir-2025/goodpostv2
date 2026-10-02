@@ -9,7 +9,7 @@ export default function StoryBar({ stories = [] }) {
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Stories</p>
-          <h2 className="font-display text-lg text-white">True_Circle</h2>
+          <h2 className="font-display text-lg text-white">People you follow</h2>
         </div>
         <p className="text-xs text-zinc-500">Tap to peek</p>
       </div>

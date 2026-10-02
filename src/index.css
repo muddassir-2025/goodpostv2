@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/*
+ * Phones below 414px (iPhone SE, most Androids) cannot fit five nav actions, so `xs`
+ * marks the width at which secondary destinations move into the overflow menu. Without
+ * it the right-hand group overflowed and the Messages icon was clipped off-screen.
+ */
+@theme {
+  --breakpoint-xs: 414px;
+}
+
 :root {
   color-scheme: dark;
   font-family: "Aptos", "Segoe UI Variable Text", "Trebuchet MS", sans-serif;

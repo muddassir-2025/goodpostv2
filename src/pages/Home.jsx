@@ -254,11 +254,10 @@ export default function Home() {
         <div className="mt-3 flex items-start justify-between gap-4">
           <div>
             <h1 className="font-display text-xl text-white">
-            IN THE NAME OF GOD — 
-            WHERE NEW HAPPINESS BEGINS.
+              Your feed, tuned to what you actually enjoy.
             </h1>
             <p className="mt-2 max-w-md text-sm leading-6 text-zinc-400">
-              Use the internet as a tool for good, not distraction. What you share will count for or against you.
+              Follow the people and topics you care about, and discover the rest as you go.
             </p>
           </div>
 

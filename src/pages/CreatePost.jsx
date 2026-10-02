@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import UploadModal from "../components/UploadModal";
-import { AudioIcon, ImageIcon, ShieldIcon, XIcon } from "../components/ui/Icons";
+import { AudioIcon, ImageIcon, ShieldIcon, XIcon, CloseIcon } from "../components/ui/Icons";
 import postService from "../services/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
+import { CATEGORIES, TAG_LABELS, searchCategories } from "../lib/categories";
 import { toast } from "../confirmService";
 
 export default function CreatePost() {
@@ -22,10 +23,8 @@ export default function CreatePost() {
   const [error, setError] = useState("");
 
   const [selectedTags, setSelectedTags] = useState([]);
-  const [customTag, setCustomTag] = useState("");
+  const [tagQuery, setTagQuery] = useState("");
   const [status, setStatus] = useState("public");
-
-  const TAGS = ["Islamic", "Quran", "Knowledge", "Memes", "Audio", "Art", "Sports", "Travel", "Other"];
 
   useEffect(() => {
     if (!image) return setImagePreview("");
@@ -60,7 +59,7 @@ export default function CreatePost() {
 
     if (!user) return setError("Please log in before creating a post.");
     if (!content.trim()) return setError("Please add a caption before publishing.");
-    if (!selectedTags.length) return setError("Select at least one tag.");
+    if (!selectedTags.length) return setError("Pick at least one tag so people can find this post.");
 
     if (containsForbiddenWord(title) || containsForbiddenWord(content) || selectedTags.some(t => containsForbiddenWord(t))) {
       return setError("Post cannot be created. It contains inappropriate language.");
@@ -95,7 +94,6 @@ export default function CreatePost() {
         content.trim().split(/\s+/).slice(0, 6).join(" ") ||
         "new-post";
 
-      // 🔥 FIX: normalize tags
       const cleanedTags = selectedTags.map((t) => t.toLowerCase());
 
       await postService.createPost({
@@ -122,16 +120,21 @@ export default function CreatePost() {
     }
   }
 
-  const handleAddCustomTag = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const val = customTag.trim();
-      if (val && !selectedTags.includes(val) && val.length < 20) {
-        setSelectedTags([...selectedTags, val]);
-        setCustomTag("");
-      }
+  const toggleTag = (id) =>
+    setSelectedTags((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
+
+  // Enter picks the first match so the picker is keyboard-usable without a mouse.
+  function handleTagKeyDown(event) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const [first] = searchCategories(tagQuery, { limit: 1 });
+    if (first && !selectedTags.includes(first.id)) {
+      setSelectedTags((prev) => [...prev, first.id]);
+      setTagQuery("");
     }
-  };
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-7rem)] items-center justify-center py-4">
@@ -210,47 +213,62 @@ export default function CreatePost() {
               />
             </label>
 
-            {/* TAGS (UNCHANGED UI STYLE + CUSTOM INPUT) */}
+            {/* TAGS — searchable picker over the shared category list */}
             <div className="space-y-2">
-              <span className="text-sm font-medium text-zinc-300">
-                Select or Add Tags (required)
-              </span>
-              
-              <div className="flex flex-wrap gap-2 m-3">
-                {[...new Set([...TAGS, ...selectedTags])].map((tag) => {
-                  const active = selectedTags.includes(tag);
-
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => {
-                        setSelectedTags((prev) =>
-                          prev.includes(tag)
-                            ? prev.filter((t) => t !== tag)
-                            : [...prev, tag]
-                        );
-                      }}
-                      className={`px-3 py-1 rounded-full text-xs border transition ${
-                        active
-                          ? "bg-white text-black border-white"
-                          : "border-white/20 text-white hover:bg-white/10"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm font-medium text-zinc-300">Tags</span>
+                <span className="text-xs text-zinc-500">
+                  {selectedTags.length ? `${selectedTags.length} selected` : "Pick at least one"}
+                </span>
               </div>
+
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedTags.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => toggleTag(id)}
+                      className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white transition hover:bg-white/20"
+                    >
+                      {CATEGORIES.find((c) => c.id === id)?.label || id}
+                      <CloseIcon className="h-3 w-3 opacity-60" />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <input
                 type="text"
-                value={customTag}
-                onChange={(e) => setCustomTag(e.target.value)}
-                onKeyDown={handleAddCustomTag}
-                placeholder="Type custom tag & press Enter"
+                value={tagQuery}
+                onChange={(e) => setTagQuery(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder="Search tags..."
                 className="w-full rounded-[22px] border border-white/10 bg-black/35 px-4 py-2 text-sm text-white outline-none placeholder:text-zinc-600"
               />
+
+              <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto pr-1">
+                {searchCategories(tagQuery).map((category) => {
+                  const active = selectedTags.includes(category.id);
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => toggleTag(category.id)}
+                      className={`rounded-full border px-3 py-1 text-xs transition ${
+                        active
+                          ? "border-white bg-white text-black"
+                          : "border-white/15 text-zinc-300 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {category.label}
+                    </button>
+                  );
+                })}
+                {tagQuery && searchCategories(tagQuery).length === 0 && (
+                  <span className="px-1 py-1 text-xs text-zinc-500">No matching tags</span>
+                )}
+              </div>
             </div>
 
             {/* UPLOADS */}

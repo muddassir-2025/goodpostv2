@@ -10,6 +10,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "e2e": "node e2e/browser.mjs",
+    "e2e:layout": "node e2e/layout.mjs",
+    "e2e:chat": "node e2e/chat-menu.mjs",
     "migrate": "npm --prefix server run migrate",
     "preview": "vite preview"
   },

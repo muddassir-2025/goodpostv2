@@ -3,9 +3,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import PostSkeleton from "../components/PostSkeleton";
 import UploadModal from "../components/UploadModal";
-import { AudioIcon, ImageIcon } from "../components/ui/Icons";
+import { AudioIcon, ImageIcon, CloseIcon } from "../components/ui/Icons";
 import postService from "../services/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
+import { CATEGORIES, searchCategories } from "../lib/categories";
 
 export default function EditPost() {
   const { id } = useParams();
@@ -25,10 +26,10 @@ export default function EditPost() {
   const [progress, setProgress] = useState(null); // upload %, null when idle/unknown
   const [error, setError] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
-  const [customTag, setCustomTag] = useState("");
+  const [tagQuery, setTagQuery] = useState("");
   const [status, setStatus] = useState("public");
 
-  const TAGS = ["Islamic", "Quran", "Knowledge", "Memes", "Audio", "Art", "Sports", "Travel", "Other"];
+
 
   useEffect(() => {
     let active = true;
@@ -44,12 +45,9 @@ export default function EditPost() {
           setOldImageId(post.featuredImg || null);
           setOldAudioId(post.audioId || null);
           
-          // Map stored tags back to display case
+          // Stored tags are lowercase ids; keep any unknown legacy tag selectable.
           if (post.tags) {
-            const displayTags = post.tags.map(t => 
-              TAGS.find(display => display.toLowerCase() === t.toLowerCase()) || t
-            );
-            setSelectedTags(displayTags);
+            setSelectedTags(post.tags.map((tag) => String(tag).toLowerCase()));
           }
           setStatus(post.status || "public");
         }
@@ -155,16 +153,20 @@ export default function EditPost() {
     }
   }
 
-  const handleAddCustomTag = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const val = customTag.trim();
-      if (val && !selectedTags.includes(val) && val.length < 20) {
-        setSelectedTags([...selectedTags, val]);
-        setCustomTag("");
-      }
+  const toggleTag = (id) =>
+    setSelectedTags((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
+    );
+
+  function handleTagKeyDown(event) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const [first] = searchCategories(tagQuery, { limit: 1 });
+    if (first && !selectedTags.includes(first.id)) {
+      setSelectedTags((prev) => [...prev, first.id]);
+      setTagQuery("");
     }
-  };
+  }
 
   if (loading) {
     return <PostSkeleton count={1} />;
@@ -238,47 +240,59 @@ export default function EditPost() {
               />
             </label>
 
-            {/* TAGS */}
+            {/* TAGS — searchable picker over the shared category list */}
             <div className="space-y-2">
-              <span className="text-sm font-medium text-zinc-300">
-                Update or Add Tags (required)
-              </span>
-              
-              <div className="flex flex-wrap gap-2 m-3">
-                {[...new Set([...TAGS, ...selectedTags])].map((tag) => {
-                  const active = selectedTags.includes(tag);
+              <div className="flex items-baseline justify-between">
+                <span className="text-sm font-medium text-zinc-300">Tags</span>
+                <span className="text-xs text-zinc-500">
+                  {selectedTags.length ? `${selectedTags.length} selected` : "Pick at least one"}
+                </span>
+              </div>
 
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedTags.map((id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => toggleTag(id)}
+                      className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white transition hover:bg-white/20"
+                    >
+                      {CATEGORIES.find((c) => c.id === id)?.label || id}
+                      <CloseIcon className="h-3 w-3 opacity-60" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <input
+                type="text"
+                value={tagQuery}
+                onChange={(e) => setTagQuery(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder="Search tags..."
+                className="w-full rounded-[22px] border border-white/10 bg-black/35 px-4 py-2 text-sm text-white outline-none placeholder:text-zinc-600"
+              />
+
+              <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto pr-1">
+                {searchCategories(tagQuery).map((category) => {
+                  const active = selectedTags.includes(category.id);
                   return (
                     <button
-                      key={tag}
+                      key={category.id}
                       type="button"
-                      onClick={() => {
-                        setSelectedTags((prev) =>
-                          prev.includes(tag)
-                            ? prev.filter((t) => t !== tag)
-                            : [...prev, tag]
-                        );
-                      }}
-                      className={`px-3 py-1 rounded-full text-xs border transition ${
+                      onClick={() => toggleTag(category.id)}
+                      className={`rounded-full border px-3 py-1 text-xs transition ${
                         active
-                          ? "bg-white text-black border-white"
-                          : "border-white/20 text-white hover:bg-white/10"
+                          ? "border-white bg-white text-black"
+                          : "border-white/15 text-zinc-300 hover:bg-white/10 hover:text-white"
                       }`}
                     >
-                      {tag}
+                      {category.label}
                     </button>
                   );
                 })}
               </div>
-
-              <input
-                type="text"
-                value={customTag}
-                onChange={(e) => setCustomTag(e.target.value)}
-                onKeyDown={handleAddCustomTag}
-                placeholder="Type custom tag & press Enter"
-                className="w-full rounded-[22px] border border-white/10 bg-black/35 px-4 py-2 text-sm text-white outline-none placeholder:text-zinc-600"
-              />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">

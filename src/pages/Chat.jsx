@@ -5,6 +5,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import Avatar from "../components/Avatar";
+import FloatingMenu from "../components/FloatingMenu";
 import { ArrowLeftIcon, EditIcon, TrashIcon, CloseIcon, DotsIcon, SearchIcon } from "../components/ui/Icons";
 import messageService from "../services/message";
 import postService from "../services/post";
@@ -15,6 +16,8 @@ export default function Chat() {
   const user = useSelector((state) => state.auth.userData);
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
+  // Anchor elements for each message's action menu, so FloatingMenu can position itself.
+  const messageMenuRefs = useRef({});
 
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -360,50 +363,54 @@ export default function Chat() {
                           <span className="text-[9px] font-bold text-white/20 mt-1.5 uppercase tracking-wider px-1">
                             {formatRelativeTime(msg.createdAt)}
                           </span>
-                        </div>
- 
-                        {/* Actions Menu */}
+                        </div>                        {/* Actions Menu — portalled so the scroll container cannot clip it */}
                         {canEdit && (
-                          <div className={`relative transition-all duration-200 flex items-center mb-4 opacity-100`}>
-                            <button 
+                          <div className="relative mb-4 flex items-center transition-all duration-200">
+                            <button
+                              ref={(el) => {
+                                if (el) messageMenuRefs.current[msg.$id] = el;
+                                else delete messageMenuRefs.current[msg.$id];
+                              }}
+                              aria-label="Message options"
+                              aria-haspopup="menu"
+                              aria-expanded={menuOpenId === msg.$id}
                               onClick={() => setMenuOpenId(menuOpenId === msg.$id ? null : msg.$id)}
-                              className={`p-1.5 rounded-full transition-colors ${menuOpenId === msg.$id ? "bg-white/10 text-white" : "bg-white/[0.05] text-white/40 hover:text-white hover:bg-white/10"}`}
+                              className={`rounded-full p-1.5 transition-colors ${menuOpenId === msg.$id ? "bg-white/10 text-white" : "bg-white/[0.05] text-white/40 hover:text-white hover:bg-white/10"}`}
                             >
                               <DotsIcon className="h-3.5 w-3.5" />
                             </button>
- 
-                            <AnimatePresence>
-                              {menuOpenId === msg.$id && (
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.9, y: 5 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.9, y: 5 }}
-                                  className="absolute bottom-full right-0 mb-2 z-50 w-32 rounded-xl border border-white/[0.08] bg-zinc-900/95 backdrop-blur-xl p-1 shadow-2xl overflow-hidden"
-                                >
-                                  <button 
-                                    onClick={() => {
-                                      setEditingMessageId(msg.$id);
-                                      setNewMessage(msg.text);
-                                      setMenuOpenId(null);
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white/80 hover:bg-white/10 hover:text-white transition"
-                                  >
-                                    <EditIcon className="h-3 w-3" />
-                                    Edit
-                                  </button>
-                                  <button 
-                                    onClick={() => {
-                                      handleDelete(msg.$id);
-                                      setMenuOpenId(null);
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10 transition"
-                                  >
-                                    <TrashIcon className="h-3 w-3" />
-                                    Delete
-                                  </button>
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
+
+                            <FloatingMenu
+                              anchorEl={{ current: messageMenuRefs.current[msg.$id] }}
+                              open={menuOpenId === msg.$id}
+                              onClose={() => setMenuOpenId(null)}
+                              align="end"
+                              className="w-36"
+                            >
+                              <button
+                                role="menuitem"
+                                onClick={() => {
+                                  setEditingMessageId(msg.$id);
+                                  setNewMessage(msg.text);
+                                  setMenuOpenId(null);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-white/80 transition hover:bg-white/10 hover:text-white"
+                              >
+                                <EditIcon className="h-3 w-3" />
+                                Edit
+                              </button>
+                              <button
+                                role="menuitem"
+                                onClick={() => {
+                                  handleDelete(msg.$id);
+                                  setMenuOpenId(null);
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs text-rose-500 transition hover:bg-rose-500/10"
+                              >
+                                <TrashIcon className="h-3 w-3" />
+                                Delete
+                              </button>
+                            </FloatingMenu>
                           </div>
                         )}
                       </div>

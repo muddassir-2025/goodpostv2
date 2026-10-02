@@ -69,8 +69,14 @@ function watch(page, bag) {
   page.on("websocket", (ws) => {
     if (ws.url().includes("/ws")) bag.ws.push(ws.url());
   });
+  // Capture a real bearer token so tests can call the API directly and prove the server
+  // enforces authorization rather than relying on the UI to hide things.
+  page.on("request", (r) => {
+    const auth = r.headers()["authorization"];
+    if (auth && !bag.token) bag.token = auth.replace(/^Bearer\s+/i, "");
+  });
 }
-const bag = () => ({ pageErrors: [], bad: [], notFound: [], ws: [] });
+const bag = () => ({ pageErrors: [], bad: [], notFound: [], ws: [], token: null });
 
 // The in-browser NSFW check runs TF.js in a worker and needs WebGL. Headless Chrome has
 // no GPU, so enable SwiftShader software rendering or the check never resolves.
@@ -373,11 +379,48 @@ try {
 
   /* ------------------------------------------------------------------ admin */
   section("admin dashboard");
+  // Admin is a role, not an assumption: assert the correct behaviour for whichever
+  // account is configured. Set GP_E2E_ADMIN=1 when using an admin account.
+  const expectAdmin = process.env.GP_E2E_ADMIN === "1";
+  const profileMenu = await A.locator('button[aria-label="Account menu"]');
+  await profileMenu.click();
+  await A.waitForTimeout(600);
+  const adminLinkCount = await A.getByRole("menuitem", { name: "Admin" }).count();
+  await A.keyboard.press("Escape");
+
+  check(
+    expectAdmin ? "admin entry shown in the profile menu" : "admin entry hidden for a non-admin",
+    expectAdmin ? adminLinkCount > 0 : adminLinkCount === 0,
+    `adminLinks=${adminLinkCount}`,
+  );
+
   await A.goto(`${BASE}/admin`, { waitUntil: "domcontentloaded" });
   await A.waitForTimeout(5000);
   const adminBad = bagA.bad.filter((x) => x.includes("/api/admin"));
-  check("admin dashboard loads", !A.url().includes("/login") && adminBad.length === 0, `${A.url()} ${adminBad.join(" | ")}`);
-  check("admin tabs render", (await A.getByText(/users|reported|system/i).count()) > 0);
+  if (expectAdmin) {
+    check("admin dashboard loads", !A.url().includes("/login") && adminBad.length === 0, `${A.url()} ${adminBad.join(" | ")}`);
+    check("admin tabs render", (await A.getByText(/users|reported|system/i).count()) > 0);
+  } else {
+    check(
+      "non-admin sees the Admins only state",
+      (await A.getByText(/admins only|don't have access/i).count()) > 0,
+      A.url(),
+    );
+  }
+
+  // The decisive check either way: authorization must be enforced by the server, not by
+  // the client hiding a page. Call the API directly with the user's own token.
+  check("captured a bearer token for direct API calls", !!bagA.token);
+  if (bagA.token) {
+    const direct = await ctxA.request.get(`${API}/api/admin/stats`, {
+      headers: { Authorization: `Bearer ${bagA.token}` },
+    });
+    check(
+      expectAdmin ? "admin API allows an admin" : "admin API rejects a non-admin (403)",
+      expectAdmin ? direct.status() === 200 : direct.status() === 403,
+      `status ${direct.status()}`,
+    );
+  }
   await A.screenshot({ path: resolve(OUT, "05-admin.png") });
 
   /* ------------------------------------------------------------ error budget */
