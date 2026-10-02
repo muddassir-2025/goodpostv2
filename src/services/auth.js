@@ -44,12 +44,25 @@ class AuthService {
     }
   }
 
+  /**
+   * Resend the sign-up code. Verification codes come from the email-OTP plugin, so
+   * prefer that endpoint; projects configured for verification *links* reject it and
+   * need the link-style call instead.
+   */
   async resendVerificationEmail(email) {
+    const otpResult = await authClient.emailOtp?.sendVerificationOtp?.({
+      email,
+      type: "email-verification",
+    });
+    if (otpResult && !otpResult.error) return;
+
     const { error } = await authClient.sendVerificationEmail({
       email,
       callbackURL: `${window.location.origin}/`,
     });
-    if (error) throw new Error(error.message || "Could not resend the code.");
+    if (error) {
+      throw new Error(otpResult?.error?.message || error.message || "Could not resend the code.");
+    }
   }
 
   async login({ email, password }) {

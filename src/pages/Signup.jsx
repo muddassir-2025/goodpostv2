@@ -18,12 +18,21 @@ export default function Signup() {
   const [notice, setNotice] = useState("");
   const [step, setStep] = useState("form"); // "form" | "verify"
   const [code, setCode] = useState("");
+  const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
     if (authStatus) {
       navigate("/", { replace: true });
     }
   }, [authStatus, navigate]);
+
+  // Tick down the resend cooldown so we don't burn through Neon's per-endpoint
+  // email rate limit (or spam the user) with repeated clicks.
+  useEffect(() => {
+    if (cooldown <= 0) return undefined;
+    const timer = setTimeout(() => setCooldown((seconds) => seconds - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   async function handleSignup(event) {
     event.preventDefault();
@@ -40,6 +49,7 @@ export default function Signup() {
       if (!(await authService.hasSession())) {
         setStep("verify");
         setNotice(`We sent a verification code to ${email}.`);
+        setCooldown(30);
         return;
       }
 
@@ -83,13 +93,16 @@ export default function Signup() {
   }
 
   async function handleResend() {
+    if (cooldown > 0) return;
     setError("");
     setNotice("");
+    setCooldown(30);
     try {
       await authService.resendVerificationEmail(email);
       setNotice(`A new code is on its way to ${email}.`);
     } catch (err) {
       setError(err?.message || "Could not resend the code.");
+      setCooldown(0);
     }
   }
 
@@ -146,10 +159,10 @@ export default function Signup() {
           <button
             type="button"
             onClick={handleResend}
-            disabled={loading}
+            disabled={loading || cooldown > 0}
             className="w-full rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Resend code
+            {cooldown > 0 ? `Resend code in ${cooldown}s` : "Resend code"}
           </button>
         </form>
       </AuthShell>

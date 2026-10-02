@@ -37,6 +37,40 @@ use Appwrite for anything (with the migration you don't).
 
 ---
 
+## Step 2b — Harden signup (email verification + rate limits)
+
+**Email verification is a Console toggle.** No code change is needed — `/signup` already
+detects whether verification is enforced and switches to a code step when it is. Until you
+flip the toggle, sign-up keeps issuing a session immediately.
+
+1. Neon Console → **Settings → Auth**.
+2. Enable **Sign-up with Email** and **Verify at Sign-up**.
+3. Choose **Verification codes** as the method. Codes work with Neon's shared email
+   provider; verification *links* would require a custom email provider.
+4. Optional: set the **Application name** so the email is branded "GoodPost" rather than
+   the Neon project name.
+
+Behaviour once enabled: sign-up returns no session, the page switches to a 6-digit code
+entry (expires after 15 minutes) with a 30-second resend cooldown, and unverified accounts
+cannot sign in.
+
+**Rate limiting is already provided by Neon Auth.** The browser talks to the Neon Auth
+service directly, so our API never sees signup/signin calls and cannot limit them itself.
+Neon enforces its own per-IP limits (measured on this project):
+
+| Endpoint | Observed limit |
+| --- | --- |
+| `/sign-up/email` | `429` on the 5th request |
+| `/sign-in/email` | `429` on the 10th request |
+| `/email-otp/*` | limited per endpoint; returns `TOO_MANY_ATTEMPTS` with `OTP_EXPIRED` / `INVALID_OTP` |
+
+Our API layers a separate global limit (600 requests / 15 min per IP, `server/src/app.js`)
+plus a stricter upload limit (`server/src/routes/uploads.js`). A tighter *signup* policy
+would have to be enforced in front of Neon Auth, or by routing sign-up through our API —
+neither is in place today.
+
+---
+
 ## Step 3 — Google sign-in (optional but recommended)
 
 1. <https://console.cloud.google.com> → **APIs & Services → Credentials** → create an
