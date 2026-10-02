@@ -35,16 +35,16 @@ class PostService {
     return api.post(`/api/posts/${postId}/report`, {});
   }
 
-  async uploadImage(file) {
+  async uploadImage(file, { onProgress } = {}) {
     const form = new FormData();
     form.append("file", file);
-    return api.upload("/api/uploads/image", form);
+    return api.upload("/api/uploads/image", form, onProgress);
   }
 
-  async uploadAudio(file) {
+  async uploadAudio(file, { onProgress } = {}) {
     const form = new FormData();
     form.append("file", file);
-    return api.upload("/api/uploads/audio", form);
+    return api.upload("/api/uploads/audio", form, onProgress);
   }
 
   async deleteFile(fileKey) {

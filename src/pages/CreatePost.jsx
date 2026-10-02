@@ -5,13 +5,11 @@ import UploadModal from "../components/UploadModal";
 import { AudioIcon, ImageIcon, ShieldIcon, XIcon } from "../components/ui/Icons";
 import postService from "../services/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
-import { useNSFW } from "../hooks/useNSFW";
 import { toast } from "../confirmService";
 
 export default function CreatePost() {
   const user = useSelector((state) => state.auth.userData);
   const navigate = useNavigate();
-  const { checkImage, isChecking } = useNSFW();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -20,6 +18,7 @@ export default function CreatePost() {
   const [imagePreview, setImagePreview] = useState("");
   const [audioPreview, setAudioPreview] = useState("");
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(null); // upload %, null when idle/unknown
   const [error, setError] = useState("");
 
   const [selectedTags, setSelectedTags] = useState([]);
@@ -73,28 +72,22 @@ export default function CreatePost() {
       let imageId = null;
       let audioId = null;
 
+      // Upload straight away and let the server moderate. The in-browser NSFW model used
+      // to run first and gated publishing behind a multi-megabyte model download, which
+      // stalled the button for tens of seconds on a cold cache for no extra safety — the
+      // API runs the same check and rejects with 422 before anything reaches storage.
       if (image) {
-        // 🔥 ULTRA-OPTIMIZED NSFW CHECK
-        const checkResponse = await checkImage(image);
-        
-        if (!checkResponse.safe) {
-          setLoading(false);
-          if (checkResponse.error) {
-             console.error("Worker error:", checkResponse.error);
-             return setError(`Image check failed: ${checkResponse.error}`);
-          }
-          const reason = checkResponse.results?.Porn > 0.7 ? "Explicit content detected." : "Inappropriate content detected.";
-          return setError(`Content Policy Violation: ${reason}`);
-        }
-
-        // 1. Upload to Appwrite if SAFE
-        const res = await postService.uploadImage(image, user.$id);
-        imageId = res?.$id;
+        const res = await postService.uploadImage(image, {
+          onProgress: (percent) => setProgress(percent),
+        });
+        imageId = res?.$id || res?.key;
       }
 
       if (audio) {
-        const res = await postService.uploadAudio(audio, user.$id);
-        audioId = res?.$id;
+        const res = await postService.uploadAudio(audio, {
+          onProgress: (percent) => setProgress(percent),
+        });
+        audioId = res?.$id || res?.key;
       }
 
       const resolvedTitle =
@@ -125,6 +118,7 @@ export default function CreatePost() {
       setError(err?.message || "Post creation failed.");
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   }
 
@@ -332,21 +326,37 @@ export default function CreatePost() {
               </div>
             </div>
 
+            {loading && progress !== null ? (
+              <div className="space-y-2 pb-1">
+                <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <span>Uploading media</span>
+                  <span className="tabular-nums">{progress}%</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-blue-500 transition-[width] duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
+
             <button
               type="submit"
-              disabled={loading || isChecking}
+              disabled={loading}
               className="w-full rounded-full bg-zinc-100 px-5 py-3 text-sm font-semibold !text-zinc-950 transition hover:bg-zinc-200 disabled:opacity-60"
             >
-              {isChecking ? "Checking image..." : loading ? "Publishing..." : "Publish post"}
+              {loading ? "Publishing..." : "Publish post"}
             </button>
           </div>
         </form>
 
         {/* Minimalist Toast Notification */}
         {error && (() => {
-          const isPolicyError = 
-            error.includes("inappropriate") || 
-            error.includes("Policy Violation") || 
+          const isPolicyError =
+            error.includes("inappropriate") ||
+            error.includes("Policy Violation") ||
+            error.includes("rejected") ||
             error.includes("flagged");
 
           return (

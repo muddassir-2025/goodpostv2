@@ -25,3 +25,6 @@ dist-ssr
 
 .env
 vision-key.json
+
+# Browser E2E screenshots
+e2e/out

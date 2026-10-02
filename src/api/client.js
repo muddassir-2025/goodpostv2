@@ -42,12 +42,51 @@ export async function request(path, { method = "GET", body, isForm = false, auth
   return data;
 }
 
+/**
+ * Upload a FormData body and report progress. `fetch` cannot observe request progress,
+ * so this uses XMLHttpRequest. `onProgress` receives 0-100.
+ */
+export async function uploadWithProgress(path, formData, onProgress) {
+  const token = await getToken();
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_URL}${path}`);
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      let data = null;
+      try {
+        data = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        data = xhr.responseText;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(data);
+      } else {
+        reject(new Error(data?.error || `Upload failed with status ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Upload failed. Check your connection and try again."));
+    xhr.onabort = () => reject(new Error("Upload cancelled."));
+
+    xhr.send(formData);
+  });
+}
+
 export const api = {
   get: (path, opts) => request(path, { ...opts, method: "GET" }),
   post: (path, body, opts) => request(path, { ...opts, method: "POST", body }),
   patch: (path, body, opts) => request(path, { ...opts, method: "PATCH", body }),
   delete: (path, opts) => request(path, { ...opts, method: "DELETE" }),
-  upload: (path, formData) => request(path, { method: "POST", body: formData, isForm: true }),
+  upload: (path, formData, onProgress) => uploadWithProgress(path, formData, onProgress),
 };
 
 export { API_URL };

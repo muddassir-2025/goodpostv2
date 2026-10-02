@@ -21,6 +21,22 @@ export function getFileUrl(fileId) {
   return `${STORAGE_BASE}/${fileId}`;
 }
 
+// Surfaces a broken VITE_STORAGE_PUBLIC_URL early: without the /<bucket> suffix every
+// image resolves to a 404 instead of the object. Only the host alone is suspicious —
+// a path such as /goodpost is required. Logged once at module load, not per image.
+if (import.meta.env.DEV && STORAGE_BASE) {
+  try {
+    if (new URL(STORAGE_BASE).pathname.replace(/\/+$/, "") === "") {
+      console.warn(
+        `[config] VITE_STORAGE_PUBLIC_URL="${STORAGE_BASE}" has no bucket path; ` +
+          `it should look like "${STORAGE_BASE}/<bucket>". Images will 404 until fixed.`,
+      );
+    }
+  } catch {
+    console.warn(`[config] VITE_STORAGE_PUBLIC_URL="${STORAGE_BASE}" is not a valid URL.`);
+  }
+}
+
 export function getInitials(name = "Guest") {
   const safeName = normalizeText(name, "Guest");
 

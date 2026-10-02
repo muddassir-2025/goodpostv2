@@ -6,13 +6,11 @@ import UploadModal from "../components/UploadModal";
 import { AudioIcon, ImageIcon } from "../components/ui/Icons";
 import postService from "../services/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
-import { useNSFW } from "../hooks/useNSFW";
 
 export default function EditPost() {
   const { id } = useParams();
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.userData);
-  const { checkImage, isChecking } = useNSFW();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -24,6 +22,7 @@ export default function EditPost() {
   const [audioPreview, setAudioPreview] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState(null); // upload %, null when idle/unknown
   const [error, setError] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
   const [customTag, setCustomTag] = useState("");
@@ -109,22 +108,12 @@ export default function EditPost() {
       let nextImageId = oldImageId;
       let nextAudioId = oldAudioId;
 
+      // Upload immediately; the API moderates before anything is stored. See CreatePost.
       if (image) {
-        // 🔥 ULTRA-OPTIMIZED NSFW CHECK
-        const checkResponse = await checkImage(image);
-        
-        if (!checkResponse.safe) {
-          setSaving(false);
-          if (checkResponse.error) {
-             console.error("Worker error:", checkResponse.error);
-             return setError(`Image check failed: ${checkResponse.error}`);
-          }
-          const reason = checkResponse.results?.Porn > 0.7 ? "Explicit content detected." : "Inappropriate content detected.";
-          return setError(`Content Policy Violation: ${reason}`);
-        }
-
-        const uploadedImage = await postService.uploadImage(image, user?.$id);
-        const imageId = uploadedImage?.$id;
+        const uploadedImage = await postService.uploadImage(image, {
+          onProgress: (percent) => setProgress(percent),
+        });
+        const imageId = uploadedImage?.$id || uploadedImage?.key;
         nextImageId = imageId || oldImageId;
 
         if (oldImageId && nextImageId !== oldImageId) {
@@ -133,8 +122,10 @@ export default function EditPost() {
       }
 
       if (audio) {
-        const uploadedAudio = await postService.uploadAudio(audio, user?.$id);
-        nextAudioId = uploadedAudio?.$id || oldAudioId;
+        const uploadedAudio = await postService.uploadAudio(audio, {
+          onProgress: (percent) => setProgress(percent),
+        });
+        nextAudioId = uploadedAudio?.$id || uploadedAudio?.key || oldAudioId;
 
         if (oldAudioId && nextAudioId !== oldAudioId) {
           await postService.deleteFile(oldAudioId);
@@ -155,10 +146,12 @@ export default function EditPost() {
       });
 
       navigate("/");
-    } catch {
-      setError("Update failed. Please try again.");
+    } catch (err) {
+      // Surface the API's message — a moderation rejection is actionable, "Update failed" is not.
+      setError(err?.message || "Update failed. Please try again.");
     } finally {
       setSaving(false);
+      setProgress(null);
     }
   }
 
@@ -354,12 +347,27 @@ export default function EditPost() {
               </div>
             </div>
 
+            {saving && progress !== null ? (
+              <div className="space-y-2 pb-1">
+                <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <span>Uploading media</span>
+                  <span className="tabular-nums">{progress}%</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-blue-500 transition-[width] duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
+
             <button
               type="submit"
-              disabled={saving || isChecking}
+              disabled={saving}
               className="w-full rounded-full bg-zinc-100 px-5 py-3 text-sm font-semibold !text-zinc-950 transition hover:bg-zinc-200 hover:!text-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isChecking ? "Checking image..." : saving ? "Saving..." : "Save changes"}
+              {saving ? "Saving..." : "Save changes"}
             </button>
           </div>
         </form>
