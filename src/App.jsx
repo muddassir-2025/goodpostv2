@@ -1,7 +1,7 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useDispatch } from "react-redux";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import authService from "./appwrite/auth";
+import authService from "./services/auth";
 import AppErrorBoundary from "./components/AppErrorBoundary";
 import AppShell from "./components/AppShell";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -37,18 +37,8 @@ function App() {
 
   useEffect(() => {
     async function initAuth() {
-      // ✅ Intercept OAuth Tokens to bypass 3rd-party cookie blocking
-      const urlParams = new URLSearchParams(window.location.search);
-      const userId = urlParams.get("userId");
-      const secret = urlParams.get("secret");
-
       try {
-        if (userId && secret) {
-          await authService.completeOAuth(userId, secret);
-          // Clean up the URL
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-
+        // Neon Auth restores the session cookie automatically after OAuth redirects.
         const user = await authService.getCurrentUser();
         if (user) {
           const isAdmin = await authService.checkIsAdmin();

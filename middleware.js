@@ -2,6 +2,7 @@ export const config = {
   matcher: '/post/:slug',
 };
 
+// Vercel edge middleware — injects Open Graph meta tags for shared post links.
 export default async function middleware(request) {
   const url = new URL(request.url);
   const slug = url.pathname.split('/').pop();
@@ -10,44 +11,37 @@ export default async function middleware(request) {
   const response = await fetch(new URL('/', request.url));
   let html = await response.text();
 
-  // 2. Fetch the post details from Appwrite via REST
-  const endpoint = process.env.VITE_APPWRITE_ENDPOINT || "https://fra.cloud.appwrite.io/v1";
-  const projectId = process.env.VITE_APPWRITE_PROJECT_ID || "69d8318f0017a3e1596b";
-  const databaseId = process.env.VITE_APPWRITE_DATABASE_ID || "69d832fc0035a264b35b";
-  const collectionId = process.env.VITE_APPWRITE_TABLE_ID || "posts";
-  const bucketId = process.env.VITE_APPWRITE_BUCKET_ID || "69d83a2c003c2cad7941";
+  // 2. Fetch the post from the GoodPost API (Render backend, backed by Neon)
+  const apiUrl = (process.env.VITE_API_URL || process.env.API_URL || '').replace(/\/+$/, '');
+  const storageBase = (process.env.VITE_STORAGE_PUBLIC_URL || process.env.STORAGE_PUBLIC_BASE_URL || '').replace(/\/+$/, '');
 
   try {
-    const appwriteUrl = `${endpoint}/databases/${databaseId}/collections/${collectionId}/documents/${slug}`;
-    const appwriteRes = await fetch(appwriteUrl, {
-      headers: {
-        "X-Appwrite-Project": projectId,
-      },
-    });
+    if (!apiUrl) throw new Error('API URL is not configured');
 
-    if (appwriteRes.ok) {
-      const post = await appwriteRes.json();
-      
-      const title = post.title || `Post by ${post.authorName || 'GoodPost User'}`;
-      const desc = post.content ? post.content.slice(0, 150) + '...' : 'Check out this post on GoodPost.';
-      
-      // WhatsApp doesn't support SVG, so use a dynamic dark gradient image with the post title!
-      let image = `https://placehold.co/1200x630/121212/ffffff.png?text=${encodeURIComponent(title.substring(0, 30))}`;
-      
-      if (post.featuredImg) {
-        image = `${endpoint}/storage/buckets/${bucketId}/files/${post.featuredImg}/view?project=${projectId}`;
-      }
+    const postRes = await fetch(`${apiUrl}/api/posts/slug/${encodeURIComponent(slug)}`);
+    if (!postRes.ok) throw new Error('Post not found');
 
-      // 3. Inject Open Graph Tags
-      html = html.replace('<!-- OG_TITLE -->', `<meta property="og:title" content="${title.replace(/"/g, '&quot;')}" />`);
-      html = html.replace('<!-- OG_DESC -->', `<meta property="og:description" content="${desc.replace(/"/g, '&quot;')}" />`);
-      html = html.replace('<!-- OG_IMAGE -->', `<meta property="og:image" content="${image}" />`);
-      html = html.replace('<!-- TWITTER_CARD -->', `<meta name="twitter:card" content="summary_large_image" />`);
-    } else {
-      throw new Error("Post not found");
+    const post = await postRes.json();
+    if (!post) throw new Error('Post not found');
+
+    const title = post.title || `Post by ${post.authorName || 'GoodPost User'}`;
+    const desc = post.content
+      ? post.content.slice(0, 150) + '...'
+      : 'Check out this post on GoodPost.';
+
+    // WhatsApp doesn't support SVG, so fall back to a dynamic dark gradient image.
+    let image = `https://placehold.co/1200x630/121212/ffffff.png?text=${encodeURIComponent(title.substring(0, 30))}`;
+    if (post.featuredImg && storageBase) {
+      image = `${storageBase}/${post.featuredImg}`;
     }
+
+    // 3. Inject Open Graph Tags
+    html = html.replace('<!-- OG_TITLE -->', `<meta property="og:title" content="${title.replace(/"/g, '&quot;')}" />`);
+    html = html.replace('<!-- OG_DESC -->', `<meta property="og:description" content="${desc.replace(/"/g, '&quot;')}" />`);
+    html = html.replace('<!-- OG_IMAGE -->', `<meta property="og:image" content="${image}" />`);
+    html = html.replace('<!-- TWITTER_CARD -->', `<meta name="twitter:card" content="summary_large_image" />`);
   } catch (err) {
-    // Fallback if Appwrite fetch fails
+    // Fallback if the post fetch fails
     html = html.replace('<!-- OG_TITLE -->', `<meta property="og:title" content="GoodPost" />`);
     html = html.replace('<!-- OG_DESC -->', `<meta property="og:description" content="Join the conversation on GoodPost." />`);
     html = html.replace('<!-- OG_IMAGE -->', `<meta property="og:image" content="https://${url.host}/GoodPost.svg" />`);

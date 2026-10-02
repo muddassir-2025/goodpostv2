@@ -1,0 +1,29 @@
+# Render Blueprint — deploy the GoodPost API with "New → Blueprint".
+services:
+  - type: web
+    name: goodpost-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: NEON_AUTH_BASE_URL
+        sync: false
+      - key: AWS_REGION
+        value: us-east-2
+      - key: AWS_ENDPOINT_URL_S3
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: STORAGE_BUCKET
+        value: goodpost
+      - key: CORS_ORIGIN
+        sync: false

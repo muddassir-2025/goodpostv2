@@ -1,0 +1,115 @@
+import { api, withQueries } from "../api/client";
+import { Query } from "../lib/appwriteCompat";
+import { subscribe } from "../lib/realtime";
+
+class MessageService {
+  async getConversations(userId) {
+    try {
+      return await api.get(
+        withQueries("/api/conversations", [
+          Query.contains("members", [userId]),
+          Query.orderDesc("lastMessageAt"),
+          Query.limit(50),
+        ]),
+      );
+    } catch (error) {
+      console.log("getConversations error:", error.message);
+      return { total: 0, documents: [] };
+    }
+  }
+
+  async getConversation(conversationId) {
+    try {
+      return await api.get(`/api/conversations/${conversationId}`);
+    } catch (error) {
+      console.log("getConversation error:", error.message);
+      return null;
+    }
+  }
+
+  async getConversationByMembers(userId1, userId2) {
+    try {
+      return await api.get(
+        `/api/conversations/by-members?userId1=${encodeURIComponent(userId1)}&userId2=${encodeURIComponent(userId2)}`,
+      );
+    } catch (error) {
+      console.log("getConversationByMembers error:", error.message);
+      return null;
+    }
+  }
+
+  async createConversation(members) {
+    return api.post("/api/conversations", { members });
+  }
+
+  async getMessages(conversationId, limit = 100) {
+    try {
+      return await api.get(
+        withQueries("/api/messages", [
+          Query.equal("conversationId", conversationId),
+          Query.orderDesc("$createdAt"),
+          Query.limit(limit),
+        ]),
+      );
+    } catch (error) {
+      console.log("getMessages error:", error.message);
+      return { total: 0, documents: [] };
+    }
+  }
+
+  async sendMessage(conversationId, senderId, text, messageId) {
+    return api.post("/api/messages", { conversationId, text, messageId: messageId || null });
+  }
+
+  async markSeen(conversationId) {
+    try {
+      return await api.post(`/api/conversations/${conversationId}/seen`, {});
+    } catch (error) {
+      console.log("markSeen error:", error.message);
+      return null;
+    }
+  }
+
+  async editMessage(messageId, newText) {
+    return api.patch(`/api/messages/${messageId}`, { text: newText });
+  }
+
+  async deleteMessage(messageId) {
+    return api.delete(`/api/messages/${messageId}`);
+  }
+
+  async clearChat(conversationId) {
+    return api.post(`/api/conversations/${conversationId}/clear`, {});
+  }
+
+  async deleteConversation(conversationId) {
+    return api.delete(`/api/conversations/${conversationId}`);
+  }
+
+  // ---- realtime (WebSocket) ----
+
+  subscribeToMessages(conversationId, callback) {
+    const unsubscribers = ["message:create", "message:update"].map((type) =>
+      subscribe(type, (payload) => {
+        if (payload?.conversationId === conversationId) {
+          callback(payload, false);
+        }
+      }),
+    );
+    return () => unsubscribers.forEach((unsub) => unsub());
+  }
+
+  subscribeToConversations(userId, callback) {
+    const unsubscribers = ["conversation:create", "conversation:update", "conversation:delete"].map((type) =>
+      subscribe(type, (payload) => {
+        if (payload?.members?.includes(userId) || payload?.$id) {
+          if (!payload.members || payload.members.includes(userId)) callback(payload, type);
+        }
+      }),
+    );
+    return () => unsubscribers.forEach((unsub) => unsub());
+  }
+}
+
+const messageService = new MessageService();
+export default messageService;

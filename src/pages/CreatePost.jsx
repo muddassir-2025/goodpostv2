@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import UploadModal from "../components/UploadModal";
 import { AudioIcon, ImageIcon, ShieldIcon, XIcon } from "../components/ui/Icons";
-import postService from "../appwrite/post";
+import postService from "../services/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
 import { useNSFW } from "../hooks/useNSFW";
 import { toast } from "../confirmService";

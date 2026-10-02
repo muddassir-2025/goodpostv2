@@ -1,7 +1,6 @@
-import { Query } from "appwrite";
-import favoriteService from "../appwrite/favorite";
-import likeService from "../appwrite/like";
-import postService from "../appwrite/post";
+import favoriteService from "../services/favorite";
+import likeService from "../services/like";
+import postService from "../services/post";
 import { normalizeText } from "./ui";
 
 export function normalizePost(post = {}) {
@@ -90,26 +89,12 @@ export async function enrichPostsForUser(posts = [], user) {
 
   try {
     const postIds = posts.map(p => p.$id);
-    
-    // Batch fetch all likes and favorites for these posts for this user
-    const [likesRes, favoritesRes] = await Promise.all([
-      likeService.databases.listDocuments(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_LIKES_ID,
-        [Query.equal("userId", user.$id), Query.equal("postId", postIds)]
-      ),
-      favoriteService.databases.listDocuments(
-        import.meta.env.VITE_APPWRITE_DATABASE_ID,
-        import.meta.env.VITE_APPWRITE_FAVORITES_ID,
-        [Query.equal("userId", user.$id), Query.equal("postId", postIds)]
-      )
-    ]);
 
-    const likedPostIds = new Set(likesRes.documents.map(d => d.postId));
-    const favoriteMap = {};
-    favoritesRes.documents.forEach(d => {
-      favoriteMap[d.postId] = d.$id;
-    });
+    // Batch fetch all likes and favorites for these posts for this user
+    const [likedPostIds, favoriteMap] = await Promise.all([
+      likeService.getLikedPostIds(user.$id, postIds),
+      favoriteService.getFavoriteMap(user.$id, postIds),
+    ]);
 
     return posts.map((post) => {
       const safePost = normalizePost(post);

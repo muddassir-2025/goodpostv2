@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router-dom";
-import authService from "../appwrite/auth";
+import authService from "../services/auth";
 import AuthShell from "../components/AuthShell";
 import { login } from "../features/auth/authSlice";
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Query } from "appwrite";
+import { Query } from "../lib/appwriteCompat";
 import { useDebounce } from "../hooks/useDebounce";
 
 import EmptyState from "../components/EmptyState";
@@ -20,7 +20,7 @@ import {
   ShieldIcon,
 } from "../components/ui/Icons";
 
-import postService from "../appwrite/post";
+import postService from "../services/post";
 import { fetchFeedPosts, sortPosts, rankPostsForYou } from "../lib/posts";
 import { getFileUrl, getHandle, formatRelativeTime } from "../lib/ui";
 

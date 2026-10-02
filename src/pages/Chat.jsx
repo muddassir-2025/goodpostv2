@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { confirm, toast } from "../confirmService";
-import { ID, Query } from "appwrite";
+import { ID, Query } from "../lib/appwriteCompat";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import Avatar from "../components/Avatar";
 import { ArrowLeftIcon, EditIcon, TrashIcon, CloseIcon, DotsIcon, SearchIcon } from "../components/ui/Icons";
-import messageService from "../appwrite/message";
-import postService from "../appwrite/post";
+import messageService from "../services/message";
+import postService from "../services/post";
 import { formatRelativeTime, getHandle } from "../lib/ui";
 
 export default function Chat() {

@@ -1,11 +1,4 @@
-import { Client, Storage } from "appwrite";
-
-const endpoint = import.meta.env.VITE_APPWRITE_ENDPOINT;
-const projectId = import.meta.env.VITE_APPWRITE_PROJECT_ID;
-const bucketId = import.meta.env.VITE_APPWRITE_BUCKET_ID;
-
-const client = new Client().setEndpoint(endpoint).setProject(projectId);
-const storage = new Storage(client);
+const STORAGE_BASE = (import.meta.env.VITE_STORAGE_PUBLIC_URL || "").replace(/\/+$/, "");
 
 export function normalizeText(value, fallback = "") {
   if (typeof value === "string") {
@@ -21,20 +14,11 @@ export function normalizeText(value, fallback = "") {
 }
 
 export function getFileUrl(fileId) {
-  if (!fileId || !endpoint || !bucketId || !projectId) {
-    return "";
-  }
-
-  try {
-    // We use getFileView instead of getFilePreview because image transformations 
-    // (resizing, cropping) are blocked on your current Appwrite plan.
-    // getFileView returns the original file URL without transformations.
-    const url = storage.getFileView(bucketId, fileId);
-    return url.toString();
-  } catch (error) {
-    console.error("getFileUrl error:", error);
-    return "";
-  }
+  if (!fileId) return "";
+  // Already-resolved absolute URLs are passed through untouched.
+  if (/^https?:\/\//.test(fileId)) return fileId;
+  if (!STORAGE_BASE) return "";
+  return `${STORAGE_BASE}/${fileId}`;
 }
 
 export function getInitials(name = "Guest") {

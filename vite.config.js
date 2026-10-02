@@ -15,7 +15,7 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('appwrite')) return 'vendor-appwrite';
+            if (id.includes('neon-js') || id.includes('@neondatabase')) return 'vendor-neon';
             if (id.includes('react') || id.includes('redux') || id.includes('react-router')) return 'vendor-react';
             if (id.includes('framer-motion')) return 'vendor-framer';
             return 'vendor-others';

@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import PostSkeleton from "../components/PostSkeleton";
 import UploadModal from "../components/UploadModal";
 import { AudioIcon, ImageIcon } from "../components/ui/Icons";
-import postService from "../appwrite/post";
+import postService from "../services/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
 import { useNSFW } from "../hooks/useNSFW";
 

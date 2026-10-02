@@ -4,11 +4,11 @@ import { useSelector } from "react-redux";
 import EmptyState from "../components/EmptyState";
 import PostCard from "../components/PostCard";
 import PostSkeleton from "../components/PostSkeleton";
-import followService from "../appwrite/follow";
-import postService from "../appwrite/post";
+import followService from "../services/follow";
+import postService from "../services/post";
 import { syncFavorite, syncLike } from "../lib/engagement";
 import { fetchFeedPosts, sortPosts } from "../lib/posts";
-import { Query } from "appwrite";
+import { Query } from "../lib/appwriteCompat";
 
 const FILTERS = [
   { id: "all",    label: "All"    },

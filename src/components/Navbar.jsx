@@ -4,8 +4,8 @@ import Avatar from "./Avatar";
 import LogoutBtn from "./LogoutBtn";
 import { HeartIcon, MessageIcon, PlusSquareIcon, BellIcon } from "./ui/Icons";
 import { getHandle } from "../lib/ui";
-import notificationService from "../appwrite/notification";
-import messageService from "../appwrite/message";
+import notificationService from "../services/notification";
+import messageService from "../services/message";
 import { useEffect, useState } from "react";
 
 function ActionLink({ to, label, icon, badge = 0 }) {

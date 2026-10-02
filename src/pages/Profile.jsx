@@ -1,14 +1,14 @@
 import { useEffect, useState, useRef } from "react";
-import { Query } from "appwrite";
+import { Query } from "../lib/appwriteCompat";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../features/auth/authSlice";
-import authService from "../appwrite/auth";
+import authService from "../services/auth";
 import EmptyState from "../components/EmptyState";
-import favoriteService from "../appwrite/favorite";
+import favoriteService from "../services/favorite";
 import { fetchFeedPosts } from "../lib/posts";
 import { formatCompactNumber, getFileUrl, getHandle } from "../lib/ui";
-import followService from "../appwrite/follow";
+import followService from "../services/follow";
 import {
   HeartIcon,
   CommentIcon,
@@ -19,7 +19,7 @@ import {
   TrashIcon,
   CameraIcon,
 } from "../components/ui/Icons";
-import postService from "../appwrite/post";
+import postService from "../services/post";
 import { login as authLogin } from "../features/auth/authSlice";
 import { confirm, toast } from "../confirmService";
 

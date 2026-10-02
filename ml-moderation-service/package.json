@@ -15,6 +15,7 @@
     "dotenv": "^17.4.2",
     "express": "*",
     "jimp": "0.22.10",
+    "mega-project": "file:..",
     "nsfwjs": "*"
   }
 }

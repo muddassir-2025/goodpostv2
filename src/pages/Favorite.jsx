@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
-import { Query } from "appwrite";
+import { Query } from "../lib/appwriteCompat";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import EmptyState from "../components/EmptyState";
 import PostSkeleton from "../components/PostSkeleton";
-import favoriteService from "../appwrite/favorite";
-import postService from "../appwrite/post";
+import favoriteService from "../services/favorite";
+import postService from "../services/post";
 import { getFileUrl, getHandle, formatCompactNumber } from "../lib/ui";
 import {
   HeartIcon,

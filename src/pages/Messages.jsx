@@ -6,9 +6,9 @@ import Avatar from "../components/Avatar";
 import EmptyState from "../components/EmptyState";
 import { SearchIcon, UserIcon } from "../components/ui/Icons";
 import { useDebounce } from "../hooks/useDebounce";
-import messageService from "../appwrite/message";
-import followService from "../appwrite/follow";
-import postService from "../appwrite/post";
+import messageService from "../services/message";
+import followService from "../services/follow";
+import postService from "../services/post";
 import { formatRelativeTime, getHandle } from "../lib/ui";
 
 export default function Messages() {

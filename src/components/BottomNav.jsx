@@ -9,7 +9,7 @@ import {
 } from "./ui/Icons";
 import { useSelector } from "react-redux";
 import { useEffect, useState } from "react";
-import notificationService from "../appwrite/notification";
+import notificationService from "../services/notification";
 
 const items = [
   { to: "/", label: "Home", icon: HomeIcon },

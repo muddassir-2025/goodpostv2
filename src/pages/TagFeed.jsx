@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Query } from "appwrite";
+import { Query } from "../lib/appwriteCompat";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
@@ -9,7 +9,7 @@ import EmptyState from "../components/EmptyState";
 
 import { fetchFeedPosts, sortPosts } from "../lib/posts";
 import { syncFavorite, syncLike } from "../lib/engagement";
-import postService from "../appwrite/post";
+import postService from "../services/post";
 import { confirm, toast } from "../confirmService";
 
 const FILTERS = [

@@ -18,10 +18,10 @@ import {
   ShieldIcon,
   TrashIcon,
 } from "../components/ui/Icons";
-import commentService from "../appwrite/comment";
-import favoriteService from "../appwrite/favorite";
-import likeService from "../appwrite/like";
-import postService from "../appwrite/post";
+import commentService from "../services/comment";
+import favoriteService from "../services/favorite";
+import likeService from "../services/like";
+import postService from "../services/post";
 import { syncFavorite, syncLike } from "../lib/engagement";
 import { formatRelativeTime, getFileUrl, getHandle } from "../lib/ui";
 import ShareModal from "../components/ShareModal";

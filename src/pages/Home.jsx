@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useState, useRef, useCallback } from "react";
-import { Query } from "appwrite";
+import { Query } from "../lib/appwriteCompat";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import EmptyState from "../components/EmptyState";
@@ -7,8 +7,8 @@ import PostCard from "../components/PostCard";
 import PostSkeleton from "../components/PostSkeleton";
 import StoryBar from "../components/StoryBar";
 import { SearchIcon } from "../components/ui/Icons";
-import postService from "../appwrite/post";
-import followService from "../appwrite/follow";
+import postService from "../services/post";
+import followService from "../services/follow";
 import { syncFavorite, syncLike } from "../lib/engagement";
 import { confirm, toast } from "../confirmService";
 import { fetchFeedPosts, filterPosts, sortPosts } from "../lib/posts";

@@ -1,5 +1,5 @@
-import favoriteService from "../appwrite/favorite";
-import likeService from "../appwrite/like";
+import favoriteService from "../services/favorite";
+import likeService from "../services/like";
 
 export async function syncLike({ postId, userId, userName, currentlyLiked }) {
   if (currentlyLiked) {
