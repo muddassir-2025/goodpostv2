@@ -15,7 +15,41 @@ class AuthService {
   async signup({ email, password, name }) {
     const { data, error } = await authClient.signUp.email({ email, password, name });
     if (error) throw new Error(error.message || "Signup failed");
+    // When the project requires verification, `emailVerified` is false and no
+    // session is issued — the caller must run the code step before signing in.
     return data?.user || data;
+  }
+
+  /** Complete sign-up when "Verify at Sign-up" is enabled in Neon Console → Auth. */
+  async verifyEmailCode({ email, otp }) {
+    if (!authClient.emailOtp?.verifyEmail) {
+      throw new Error("Email verification is not enabled for this project.");
+    }
+    const { data, error } = await authClient.emailOtp.verifyEmail({ email, otp });
+    if (error) throw new Error(error.message || "That code is not valid.");
+    clearTokenCache();
+    return data;
+  }
+
+  /**
+   * True when a Neon Auth session cookie is present. After sign-up this tells us
+   * whether "Verify at Sign-up" is enforced: required verification issues no session.
+   */
+  async hasSession() {
+    try {
+      const { data } = await authClient.getSession();
+      return Boolean(data?.session);
+    } catch {
+      return false;
+    }
+  }
+
+  async resendVerificationEmail(email) {
+    const { error } = await authClient.sendVerificationEmail({
+      email,
+      callbackURL: `${window.location.origin}/`,
+    });
+    if (error) throw new Error(error.message || "Could not resend the code.");
   }
 
   async login({ email, password }) {

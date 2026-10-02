@@ -15,6 +15,9 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [step, setStep] = useState("form"); // "form" | "verify"
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     if (authStatus) {
@@ -29,21 +32,128 @@ export default function Signup() {
 
     try {
       const userData = await authService.signup({ email, password, name });
+      if (!userData) throw new Error("Signup failed");
 
-      if (userData) {
-        await authService.login({ email, password });
-        const user = await authService.getCurrentUser();
-
-        if (user) {
-          const isAdmin = await authService.checkIsAdmin();
-          dispatch(login({ userData: user, isAdmin }));
-        }
+      // With "Verify at Sign-up" enabled, sign-up issues no session — the user has
+      // to enter the emailed code first. With it disabled we get a session right
+      // away and can continue exactly as before.
+      if (!(await authService.hasSession())) {
+        setStep("verify");
+        setNotice(`We sent a verification code to ${email}.`);
+        return;
       }
-    } catch {
-      setError("Signup failed. Try a different email or stronger password.");
+
+      await authService.login({ email, password });
+      const user = await authService.getCurrentUser();
+
+      if (user) {
+        const isAdmin = await authService.checkIsAdmin();
+        dispatch(login({ userData: user, isAdmin }));
+      }
+    } catch (err) {
+      setError(err?.message || "Signup failed. Try a different email or stronger password.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleVerify(event) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      await authService.verifyEmailCode({ email, otp: code.trim() });
+
+      if (await authService.hasSession()) {
+        const user = await authService.getCurrentUser();
+        if (user) {
+          const isAdmin = await authService.checkIsAdmin();
+          dispatch(login({ userData: user, isAdmin }));
+          return;
+        }
+      }
+      // Verified, but auto sign-in is off — send them to the login form.
+      navigate("/login", { replace: true });
+    } catch (err) {
+      setError(err?.message || "That code is not valid. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResend() {
+    setError("");
+    setNotice("");
+    try {
+      await authService.resendVerificationEmail(email);
+      setNotice(`A new code is on its way to ${email}.`);
+    } catch (err) {
+      setError(err?.message || "Could not resend the code.");
+    }
+  }
+
+  const feedback = (
+    <>
+      {error ? (
+        <div className="rounded-[22px] border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          {error}
+        </div>
+      ) : null}
+      {notice ? (
+        <div className="rounded-[22px] border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          {notice}
+        </div>
+      ) : null}
+    </>
+  );
+
+  if (step === "verify") {
+    return (
+      <AuthShell
+        eyebrow="Verify your email"
+        title="Enter your code"
+        description={`We sent a code to ${email}. It expires after 15 minutes.`}
+        footerText="Wrong email?"
+        footerLink="/signup"
+        footerLabel="Start over"
+      >
+        <form onSubmit={handleVerify} className="space-y-4">
+          {feedback}
+
+          <label className="block space-y-2">
+            <span className="text-sm font-medium text-zinc-300">Verification code</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(event) => setCode(event.target.value)}
+              placeholder="123456"
+              className="w-full rounded-[22px] border border-white/10 bg-black/35 px-4 py-3 text-center text-lg tracking-[0.4em] text-white outline-none transition placeholder:text-zinc-500 focus:border-white/20"
+              required
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={loading || !code.trim()}
+            className="w-full rounded-full bg-zinc-100 px-5 py-3 text-sm font-semibold !text-zinc-950 transition hover:bg-zinc-200 hover:!text-zinc-950 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Verifying..." : "Verify email"}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={loading}
+            className="w-full rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Resend code
+          </button>
+        </form>
+      </AuthShell>
+    );
   }
 
   return (
@@ -76,11 +186,7 @@ export default function Signup() {
           <div className="h-px w-full bg-white/10" />
         </div>
 
-        {error ? (
-          <div className="rounded-[22px] border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-            {error}
-          </div>
-        ) : null}
+        {feedback}
 
         <label className="block space-y-2">
           <span className="text-sm font-medium text-zinc-300">Name</span>
