@@ -6,12 +6,10 @@ export default function Toast() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (toast.open) {
-      setVisible(true);
-    } else {
-      const timer = setTimeout(() => setVisible(false), 300); // fade out
-      return () => clearTimeout(timer);
-    }
+    // Deferred in both directions so we never setState synchronously during commit.
+    // The 300ms delay keeps the element mounted while it fades out.
+    const timer = setTimeout(() => setVisible(toast.open), toast.open ? 0 : 300);
+    return () => clearTimeout(timer);
   }, [toast.open]);
 
   if (!visible && !toast.open) return null;

@@ -13,6 +13,18 @@ const AudioPlayer = forwardRef(({ src, title }, ref) => {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  // { type: 'forward' | 'backward', x, y } — declared before useImperativeHandle, which reads it.
+  const [seekFeedback, setSeekFeedback] = useState(null);
+
+  // Must be declared before useImperativeHandle, which references it.
+  const togglePlay = () => {
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
 
   useImperativeHandle(ref, () => ({
     skipForward: () => {
@@ -56,15 +68,6 @@ const AudioPlayer = forwardRef(({ src, title }, ref) => {
     };
   }, [isDragging]);
 
-  const togglePlay = () => {
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
-
   const handleSeek = (e) => {
     const time = parseFloat(e.target.value);
     setCurrentTime(time);
@@ -104,8 +107,6 @@ const AudioPlayer = forwardRef(({ src, title }, ref) => {
     link.click();
     document.body.removeChild(link);
   };
-
-  const [seekFeedback, setSeekFeedback] = useState(null); // { type: 'forward' | 'backward', x, y }
 
   const handleCardClick = (e) => {
     if (e.target.closest("button") || e.target.closest("input")) return;

@@ -24,6 +24,7 @@ const EditPost = lazy(() => import("./pages/EditPost"));
 const TagFeed = lazy(() => import("./pages/TagFeed"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const Chat = lazy(() => import("./pages/Chat"));
+const Admin = lazy(() => import("./pages/Admin"));
 
 const PageLoader = () => (
   <div className="flex min-h-[60vh] items-center justify-center">
@@ -172,6 +173,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <EditPost />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <Admin />
                 </ProtectedRoute>
               }
             />

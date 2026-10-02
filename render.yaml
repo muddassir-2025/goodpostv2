@@ -27,3 +27,14 @@ services:
         value: goodpost
       - key: CORS_ORIGIN
         sync: false
+      # Image moderation runs in-process (~160 MB resident, fits the free 512 MB tier).
+      - key: MODERATION_ENABLED
+        value: "true"
+      - key: MODERATION_FAIL_POLICY
+        value: closed
+      # Comma-separated emails auto-promoted to admin on first login.
+      - key: ADMIN_EMAILS
+        sync: false
+      # Optional error tracking — leave unset to disable Sentry.
+      - key: SENTRY_DSN
+        sync: false

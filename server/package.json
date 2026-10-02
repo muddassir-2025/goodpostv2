@@ -10,6 +10,8 @@
     "dev": "node --watch src/index.js",
     "migrate": "node scripts/migrate.js",
     "seed:music": "node scripts/seedMusic.js",
+    "set-admin": "node scripts/setAdmin.js",
+    "test": "node --test test/*.test.js",
     "check": "node --check src/index.js"
   },
   "engines": {
@@ -17,6 +19,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.700.0",
+    "@sentry/node": "^11.2.0",
+    "@tensorflow/tfjs": "^4.22.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
@@ -25,7 +29,9 @@
     "jose": "^5.9.6",
     "mega-project": "file:..",
     "multer": "^2.0.0",
+    "nsfwjs": "^4.3.0",
     "pg": "^8.13.1",
+    "sharp": "^0.35.5",
     "ws": "^8.18.0"
   }
 }

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n web,api,ml \"vite\" \"npm --prefix server run dev\" \"npm --prefix ml-moderation-service start\"",
+    "dev": "concurrently -n web,api \"vite\" \"npm --prefix server run dev\"",
     "dev:web": "vite",
     "dev:api": "npm --prefix server run dev",
     "build": "vite build",

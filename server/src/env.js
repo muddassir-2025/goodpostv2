@@ -5,6 +5,17 @@ function optional(name, fallback = "") {
   return value === undefined || value === "" ? fallback : value;
 }
 
+function num(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function flag(name, fallback) {
+  const value = process.env[name];
+  if (value === undefined || value === "") return fallback;
+  return !/^(false|0|no|off)$/i.test(value);
+}
+
 const nodeEnv = optional("NODE_ENV", "development");
 
 export const env = {
@@ -17,6 +28,13 @@ export const env = {
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean),
+  // Bootstrap admins by email. Matching profiles are promoted on first login.
+  adminEmails: optional("ADMIN_EMAILS")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean),
+  // Optional Sentry error tracking; disabled entirely when unset.
+  sentryDsn: optional("SENTRY_DSN"),
   // Neon Object Storage exposes standard AWS_* names; `neon env pull` writes them for you.
   storage: {
     region: optional("AWS_REGION", "us-east-2"),
@@ -26,6 +44,19 @@ export const env = {
     bucket: optional("STORAGE_BUCKET", "goodpost"),
     // Optional override; defaults to `${endpoint}/${bucket}` for public_read buckets.
     publicBaseUrl: optional("STORAGE_PUBLIC_BASE_URL").replace(/\/+$/, ""),
+  },
+  // In-process image moderation (nsfwjs).
+  moderation: {
+    enabled: flag("MODERATION_ENABLED", true),
+    // "closed" rejects uploads when the model can't run; "open" lets them through.
+    failPolicy: optional("MODERATION_FAIL_POLICY", "closed") === "open" ? "open" : "closed",
+    // Optional self-hosted model URL; defaults to the nsfwjs MobileNetV2 model.
+    modelUrl: optional("MODERATION_MODEL_URL"),
+    thresholds: {
+      porn: num("MODERATION_PORN_THRESHOLD", 0.7),
+      hentai: num("MODERATION_HENTAI_THRESHOLD", 0.7),
+      sexy: num("MODERATION_SEXY_THRESHOLD", 0.8),
+    },
   },
 };
 

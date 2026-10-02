@@ -1,77 +1,118 @@
-# 🛡️ ML-Based Image Moderation Architecture (Client-Side)
+# 🛡️ Image Moderation Architecture
 
-This document provides a complete overview of the highly optimized **Client-Side** ML Image Moderation system integrated directly into your React app.
+GoodPost moderates images in **two layers**: a fast browser-side check for instant feedback, and
+an authoritative server-side check that cannot be bypassed.
 
-## 🏗️ 1. Architecture Diagram
+The browser check alone is not enough — anyone can `POST` straight to `/api/uploads/image`. The
+API is therefore the source of truth: **an image is only written to public storage after it has
+been classified and approved server-side.**
+
+## 🏗️ 1. Flow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant React Frontend (NSFWJS)
-    participant Appwrite Storage
-    participant Appwrite Database
+    participant React (nsfwjs worker)
+    participant API (Render)
+    participant Storage (Neon Object Storage)
 
-    User->>React Frontend (NSFWJS): Upload Image & Click "Publish"
-    
-    rect rgb(20, 20, 20)
-    Note over React Frontend (NSFWJS): ML Classification Pipeline
-    React Frontend (NSFWJS)->>React Frontend (NSFWJS): Read local <img /> element
-    React Frontend (NSFWJS)->>React Frontend (NSFWJS): MobileNetV2 NSFW Model analyzes tensor
-    end
-
-    alt Image is UNSAFE (allowed: false)
-        React Frontend (NSFWJS)-->>User: Show Error "Image Blocked: Detected inappropriate content"
-        Note over React Frontend (NSFWJS): Network request NEVER hits Appwrite!
-    else Image is SAFE (allowed: true)
-        React Frontend (NSFWJS)->>Appwrite Storage: 1. Upload raw image
-        Appwrite Storage-->>React Frontend (NSFWJS): Return Image ID
-        React Frontend (NSFWJS)->>Appwrite Database: 2. Create Post Document
-        Appwrite Database-->>React Frontend (NSFWJS): Success
-        React Frontend (NSFWJS)-->>User: Redirect to Feed
+    User->>React (nsfwjs worker): Select image, click Publish
+    React (nsfwjs worker)->>React (nsfwjs worker): MobileNetV2 classifies in a Web Worker
+    alt Unsafe (browser)
+        React (nsfwjs worker)-->>User: "Content Policy Violation" — no network request at all
+    else Safe (browser)
+        React (nsfwjs worker)->>API: POST /api/uploads/image
+        Note over API: auth → magic bytes → nsfwjs classify
+        alt Rejected by server
+            API-->>User: 422 rejected / 400 wrong bytes / 503 unverifiable
+            Note over API: object never reaches storage
+        else Approved
+            API->>Storage: PutObject
+            Storage-->>API: key
+            API-->>User: 201 { $id: key, url }
+        end
     end
 ```
 
----
+## 🧱 2. Layers
 
-## 🚀 2. The Tech Stack & Why Client-Side?
+### Layer 1 — Browser (`src/hooks/useNSFW.js` + `src/workers/nsfwWorker.js`)
 
-We are using **NSFWJS** powered by **TensorFlow.js (`@tensorflow/tfjs`)**.
+Runs `nsfwjs` in a Web Worker so the main thread never blocks. Blocks the upload before a single
+byte of network traffic is spent, and gives instant feedback. Uses the same thresholds as the
+server so the two never disagree.
 
-**Why Pure JavaScript (Client-Side) instead of a Node.js Backend?**
-- **Zero Build Errors:** Windows natively struggles to build C++ Python bindings for `@tensorflow/tfjs-node` without massive Visual Studio build tools. Pure JS completely bypasses this.
-- **Zero Server Costs:** The ML inference runs entirely on the user's browser (Edge/Chrome/Safari). You don't have to pay for a backend server or heavy ML container hosting.
-- **Saves Bandwidth:** Because the ML check happens *before* the upload, bad images are blocked instantly without wasting Appwrite Storage data.
-- **Incredible Speed:** The `MobileNetV2` model is extremely lightweight (~2MB) and evaluates the image directly from RAM in milliseconds.
+### Layer 2 — API (`server/src/moderation.js`) — authoritative
 
----
+Runs on every upload, before the object is stored:
 
-## 💻 3. Implementation Details
+1. **Magic-byte sniffing** (`server/src/mime.js`) — the bytes must actually be the declared type.
+   A renamed executable or an `.svg` full of scripts never gets to the model.
+2. **Decode** — `sharp` resizes to 224×224 (honouring EXIF rotation), capped at 40 MP so a
+   decompression bomb can't exhaust memory.
+3. **Classify** — `nsfwjs` MobileNetV2 → `Porn` / `Hentai` / `Sexy` / `Neutral` / `Drawing`.
+4. **Verdict** — `server/src/moderationPolicy.js` (pure, unit-tested) applies the thresholds.
+5. **Store** — only approved images are written to Neon Object Storage.
 
-I have implemented a dedicated **Node.js/Express** backend using `@tensorflow/tfjs` and `nsfwjs` to handle this strict moderation layer. This ensures consistent moderation logic that cannot be bypassed on the client side.
+## 📊 3. Measured cost
 
-### The Code (`src/pages/CreatePost.jsx` & `ml-moderation-service/server.js`)
-When a user uploads an image, the app uses a **Zero Tolerance** policy:
-1. **Upload FIRST**: The image hits Appwrite Storage temporarily.
-2. **Strict API Check**: The backend API analyzes the image with a **20% (0.2) confidence threshold**.
-3. **Strict Categories**: It explicitly blocks any image flagged as `Sexy` (Racy/Suggestive), `Porn`, or `Hentai`.
-4. **Instant Deletion**: If the threshold is hit, the frontend instantly calls `deleteFile(imageId)` to scrub it from Appwrite.
-5. **Detailed Logging**: Every blocked attempt is logged on the backend server with the image URL, category, and exact confidence score for monitoring.
-6. **Error Message**: The user sees: *"Content Policy Violation: This image has been flagged for containing suggestive or inappropriate content."*
+Numbers from this machine, pure-JS TensorFlow (`@tensorflow/tfjs`, no native bindings):
 
----
+| Metric | Value |
+| --- | --- |
+| Model load (boot, once) | ~3.5 s |
+| Resident memory after load | ~160 MB |
+| Inference per image | ~3–4 s |
+| Render free tier budget | 512 MB ✅ |
 
-## 🛠️ 4. How to Run It Right Now
+The model is preloaded at boot (`warmModeration()`), so the first upload isn't slow and a broken
+CDN shows up in the startup log rather than in a user's request.
 
-You can run both servers with:
+> Inference is CPU-bound and deliberately not native. If latency becomes a problem, installing
+> `@tensorflow/tfjs-node` speeds it up dramatically at the cost of a much heavier build. The
+> swap is contained to `server/src/moderation.js`.
+
+## ⚙️ 4. Configuration
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `MODERATION_ENABLED` | `true` | Turn the server-side check off entirely |
+| `MODERATION_FAIL_POLICY` | `closed` | `closed` = refuse unverifiable uploads (503); `open` = allow them |
+| `MODERATION_PORN_THRESHOLD` | `0.7` | Block above this probability |
+| `MODERATION_HENTAI_THRESHOLD` | `0.7` | Block above this probability |
+| `MODERATION_SEXY_THRESHOLD` | `0.8` | Block above this probability |
+| `MODERATION_MODEL_URL` | nsfwjs CDN | Self-hosted model location |
+
+Thresholds are **exclusive**: a value of exactly `0.7` passes, `0.71` blocks.
+
+`failPolicy=closed` is the default because moderation is a safety control — publishing an
+unverified image is worse than making the user retry. Set it to `open` if you'd rather keep
+uploads working during a CDN outage.
+
+## 🧪 5. Verifying it
+
 ```bash
-npm run dev
+# unit tests for the verdict logic and the byte sniffer
+npm --prefix server test
+
+# live check: a real image is approved, an unreadable one is refused (fail-closed)
+node --input-type=module -e '
+import { readFileSync } from "node:fs";
+import { moderateImage } from "./server/src/moderation.js";
+console.log(await moderateImage(readFileSync("public/GoodPost.jpeg")));
+console.log(await moderateImage(Buffer.from("<html>not an image</html>")));
+'
 ```
 
-The ML server will start alongside Vite. Any image with even a slight hint of suggestiveness (>= 20% confidence) will now be automatically rejected and logged.
+The admin dashboard (`/admin` → **System**) reports moderation readiness, the active fail policy,
+how many images have been blocked, and the upload counters.
 
----
+## 💡 6. Why not the alternatives?
 
-## 🌟 5. Bonus Improvements (Currently Active)
-
-1. **Client-Side Model Caching:** TensorFlow automatically caches the 2MB model in IndexedDB after the first load, meaning subsequent moderations happen in under `50ms`.
-2. **Bandwidth Savings:** Traditional moderation uploads the file to the server first, wasting network usage. By doing this locally, you save 100% of bandwidth for blocked files.
+- **Client-side only** — free and instant, but trivially bypassed by calling the upload endpoint
+  directly. Kept as layer 1 for speed, never trusted on its own.
+- **A separate ML service** — an extra deployment to build, host, keep awake, and pay for. The
+  model fits in the API we already run, so there is nothing extra to operate.
+- **A hosted moderation API** (Google Vision SafeSearch, etc.) — more accurate and zero memory
+  overhead, but adds per-image cost and an external dependency. Worth revisiting if accuracy or
+  latency becomes the constraint.

@@ -8,7 +8,10 @@ export default function ConfirmPopup() {
   const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
-    if (open) setInputValue("");
+    // Deferred so we never setState synchronously during the commit phase.
+    if (!open) return undefined;
+    const timer = setTimeout(() => setInputValue(""), 0);
+    return () => clearTimeout(timer);
   }, [open]);
 
   if (!open) return null;

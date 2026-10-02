@@ -21,34 +21,32 @@ export function useNSFW() {
     setIsChecking(true);
     setError(null);
 
-    return new Promise(async (resolve) => {
-      try {
-        // 1. Prepare image (resize + bitmap)
-        const imageData = await prepareImageForDetection(file);
+    try {
+      // 1. Prepare image (resize + bitmap)
+      const imageData = await prepareImageForDetection(file);
 
-        // 2. Initialize worker if not exists
-        if (!workerRef.current) {
-          // In Vite, we use this syntax for workers
-          workerRef.current = new Worker(
-            new URL('../workers/nsfwWorker.js', import.meta.url),
-            { type: 'module' }
-          );
-        }
+      // 2. Initialize worker if not exists
+      if (!workerRef.current) {
+        // In Vite, we use this syntax for workers
+        workerRef.current = new Worker(
+          new URL('../workers/nsfwWorker.js', import.meta.url),
+          { type: 'module' }
+        );
+      }
 
-        const worker = workerRef.current;
+      const worker = workerRef.current;
 
-        // 3. Listen for result
+      // 3. Await the worker's verdict
+      const result = await new Promise((resolve) => {
         const handleMessage = (e) => {
           worker.removeEventListener('message', handleMessage);
-          setIsChecking(false);
-          
+
           if (e.data.success) {
             resolve({
               safe: !e.data.isUnsafe,
               results: e.data.results
             });
           } else {
-            setError(e.data.error);
             resolve({ safe: false, error: e.data.error });
           }
         };
@@ -57,12 +55,16 @@ export function useNSFW() {
 
         // 4. Send to worker (transferring bitmap for performance)
         worker.postMessage({ imageData }, [imageData]);
-      } catch (err) {
-        setIsChecking(false);
-        setError(err.message);
-        resolve({ safe: false, error: err.message });
-      }
-    });
+      });
+
+      if (result.error) setError(result.error);
+      return result;
+    } catch (err) {
+      setError(err.message);
+      return { safe: false, error: err.message };
+    } finally {
+      setIsChecking(false);
+    }
   }, []);
 
   return { checkImage, isChecking, error };

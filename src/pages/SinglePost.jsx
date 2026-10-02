@@ -25,7 +25,7 @@ import postService from "../services/post";
 import { syncFavorite, syncLike } from "../lib/engagement";
 import { formatRelativeTime, getFileUrl, getHandle } from "../lib/ui";
 import ShareModal from "../components/ShareModal";
-import { confirm } from "../confirmService"; 
+import { confirm, toast } from "../confirmService"; 
 
 export default function SinglePost() {
   const { slug } = useParams();

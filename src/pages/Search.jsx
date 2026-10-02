@@ -156,7 +156,9 @@ export default function Search() {
       if (res.status === "deleted") {
         setPosts((prev) => prev.filter((p) => p.$id !== post.$id));
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error("reportPost failed:", e);
+    }
   };
 
   const handleDelete = async (post) => {
@@ -165,7 +167,9 @@ export default function Search() {
     try {
       await postService.deletePost(post.$id);
       setPosts((prev) => prev.filter((p) => p.$id !== post.$id));
-    } catch (e) {}
+    } catch (e) {
+      console.error("deletePost failed:", e);
+    }
   };
 
   /* ─── POST CARD ─── */

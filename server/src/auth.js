@@ -36,23 +36,30 @@ export async function ensureProfile(payload) {
   const id = payload.sub || payload.id;
   if (!id) return null;
 
+  const email = payload.email || "";
+  const name = payload.name || email.split("@")[0] || "Guest";
+  // Bootstrap admins listed in ADMIN_EMAILS; this only ever promotes, never demotes.
+  const shouldBeAdmin = env.adminEmails.includes(email.toLowerCase());
+
   const existing = await one("SELECT * FROM profiles WHERE id = $1", [id]);
   if (existing) {
-    // Refresh name/email if the provider changed them.
-    if (existing.email !== payload.email || existing.name !== payload.name) {
-      return one(
-        `UPDATE profiles SET email = $2, name = $3, updated_at = now() WHERE id = $1 RETURNING *`,
-        [id, payload.email || existing.email, payload.name || existing.name],
-      );
-    }
-    return existing;
+    const stale =
+      existing.email !== email ||
+      existing.name !== name ||
+      (shouldBeAdmin && !existing.is_admin);
+    if (!stale) return existing;
+    return one(
+      `UPDATE profiles SET email = $2, name = $3, is_admin = is_admin OR $4, updated_at = now()
+       WHERE id = $1 RETURNING *`,
+      [id, email, name, shouldBeAdmin],
+    );
   }
 
   return one(
-    `INSERT INTO profiles (id, email, name) VALUES ($1, $2, $3)
+    `INSERT INTO profiles (id, email, name, is_admin) VALUES ($1, $2, $3, $4)
      ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, updated_at = now()
      RETURNING *`,
-    [id, payload.email || "", payload.name || payload.email?.split("@")[0] || "Guest"],
+    [id, email, name, shouldBeAdmin],
   );
 }
 

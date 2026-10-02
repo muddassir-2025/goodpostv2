@@ -131,14 +131,23 @@ Also set `VITE_API_URL` and `VITE_STORAGE_PUBLIC_URL` so the Open Graph middlewa
 npm run migrate
 ```
 
-Promote yourself (after signing up once):
+Promote yourself **either** by setting the email in `server/.env` (and on Render):
 
-```sql
-UPDATE profiles SET is_admin = true WHERE email = 'you@example.com';
+```
+ADMIN_EMAILS=you@example.com
 ```
 
+then signing out and back in — or, after signing up once, from the CLI:
+
+```bash
+npm --prefix server run set-admin -- you@example.com
+```
+
+You should then see a shield icon in the navbar linking to `/admin`.
+
 Then verify: sign up → create a post with an image → like/comment → follow someone →
-send a message (another browser) → notifications appear in realtime.
+send a message (another browser) → notifications appear in realtime. An image that trips
+moderation (or a renamed non-image) should be rejected at the upload step.
 
 ---
 

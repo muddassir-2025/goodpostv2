@@ -8,6 +8,12 @@ export default defineConfig([
   // The backend is a separate Node package with its own tooling (see server/package.json).
   globalIgnores(['dist', 'node_modules', 'server']),
 
+  // Vercel Edge middleware runs on a Node-compatible runtime, so `process` is available.
+  {
+    files: ['middleware.js'],
+    languageOptions: { globals: { ...globals.node } },
+  },
+
   {
     files: ['**/*.{js,jsx}'],
 

@@ -2,7 +2,7 @@ import { useSelector } from "react-redux";
 import { Link, NavLink } from "react-router-dom";
 import Avatar from "./Avatar";
 import LogoutBtn from "./LogoutBtn";
-import { HeartIcon, MessageIcon, PlusSquareIcon, BellIcon } from "./ui/Icons";
+import { HeartIcon, MessageIcon, PlusSquareIcon, BellIcon, ShieldIcon } from "./ui/Icons";
 import { getHandle } from "../lib/ui";
 import notificationService from "../services/notification";
 import messageService from "../services/message";
@@ -39,6 +39,7 @@ function ActionLink({ to, label, icon, badge = 0 }) {
 
 export default function Navbar() {
   const user = useSelector((state) => state.auth.userData);
+  const isAdmin = useSelector((state) => state.auth.isAdmin);
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -105,6 +106,7 @@ export default function Navbar() {
 
         {user ? (
           <div className="flex items-center gap-2 sm:gap-3">
+            {isAdmin && <ActionLink to="/admin" label="Admin" icon={ShieldIcon} />}
             <ActionLink to="/create" label="Create post" icon={PlusSquareIcon} />
             <ActionLink to="/favorites" label="Favorites" icon={HeartIcon} />
             <ActionLink to="/notifications" label="Notifications" icon={BellIcon} badge={unreadCount} />

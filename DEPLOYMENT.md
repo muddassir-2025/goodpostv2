@@ -84,11 +84,26 @@ Vercel (React SPA)  ──►  Render (Node/Express API)  ──►  Neon Postgr
    STORAGE_BUCKET=goodpost
 
    CORS_ORIGIN=https://your-app.vercel.app
+
+   # Image moderation runs in-process (~160 MB, fits the free 512 MB tier)
+   MODERATION_ENABLED=true
+   MODERATION_FAIL_POLICY=closed
+
+   # Comma-separated emails auto-promoted to admin on first login
+   ADMIN_EMAILS=you@example.com
+
+   # Optional error tracking; leave unset to disable
+   # SENTRY_DSN=https://...
    ```
 
-4. Deploy, then confirm `https://<service>.onrender.com/health` returns `{"ok":true}`.
+4. Deploy, then confirm `https://<service>.onrender.com/health` returns
+   `{"ok":true,"db":"up","moderation":{"enabled":true,"ready":true}}`.
 
 WebSockets are served on the same host at `/ws?token=<jwt>` — no extra configuration.
+
+> **Note:** `render.yaml` in the repo root is a blueprint for all of the above. The free plan
+> sleeps after ~15 minutes idle, so the first request after a nap takes a few seconds — and
+> the NSFW model is re-warmed at boot (~4 s) before the first image can be moderated.
 
 ---
 
@@ -149,8 +164,56 @@ almost no changes.
 | `services/story.js` | `/api/stories` |
 | `services/auth.js` | Neon Auth + `/api/users/me` |
 
-### Optional: ML moderation service
+## Image moderation
 
-`ml-moderation-service/` is a separate Express service (Google Cloud Vision) for image
-moderation. It is **not** wired into the SPA build; deploy it as its own Render service if you
-want it, and point `vite.config.js`'s `/moderate-image` proxy at it for local dev.
+Moderation runs **inside the API** — there is no second service to deploy.
+
+- `sharp` decodes and resizes the upload to 224×224, then `nsfwjs` (MobileNetV2) classifies it.
+- The model is preloaded at boot so the first upload isn't slow, and stays resident at roughly
+  **160 MB** — comfortably inside Render's free 512 MB tier.
+- Blocked when `Porn > 0.7`, `Hentai > 0.7`, or `Sexy > 0.8`; tune with
+  `MODERATION_PORN_THRESHOLD` / `MODERATION_HENTAI_THRESHOLD` / `MODERATION_SEXY_THRESHOLD`.
+- `MODERATION_FAIL_POLICY` defaults to `closed`: if the model cannot evaluate an image, the
+  upload is refused with `503` rather than published unverified. Set it to `open` to prefer
+  availability over strictness.
+- Uploaded bytes are also checked against magic-byte signatures (`src/mime.js`), so a renamed
+  non-image is rejected before moderation even runs.
+- Rejected uploads never reach Neon Object Storage.
+
+Expect a few seconds of latency per image (pure-JS TensorFlow). If that becomes a problem,
+install `@tensorflow/tfjs-node` or move this to a dedicated service later — the swap is
+contained to `server/src/moderation.js`.
+
+To use your own copy of the model instead of the nsfwjs CDN, host it somewhere public and set
+`MODERATION_MODEL_URL`.
+
+## Admins
+
+Neon Auth has no teams/roles concept, so admin is a flag on `profiles`.
+
+1. Set `ADMIN_EMAILS=you@example.com` (comma-separated) in `server/.env` and on Render, then
+   sign out and back in — matching profiles are promoted automatically on the next request.
+2. Or promote an existing profile directly (the user must have signed in once, so a profile
+   row exists):
+
+   ```bash
+   npm --prefix server run set-admin -- you@example.com
+   # revoke:
+   npm --prefix server run set-admin -- you@example.com false
+   ```
+
+3. Admins see a shield icon in the navbar linking to `/admin`, where they can promote/demote
+   users, review reported posts, and inspect process and moderation health.
+
+## Error tracking (optional)
+
+Set `SENTRY_DSN` on Render to enable Sentry. Unhandled route errors are reported with their
+path and method. Sentry is fully disabled — with no startup cost — when the variable is unset;
+`/api/admin/stats` always exposes in-process counters either way.
+
+## Tests
+
+```bash
+npm --prefix server test   # 45 tests, node:test, no database required
+npm run lint
+```
