@@ -18,15 +18,22 @@ function decodeExpiry(token) {
 
 let cached = { token: null, expiresAt: 0 };
 
-/** Return a valid Neon Auth JWT, refreshing shortly before it expires. */
+/**
+ * Return a valid Neon Auth JWT, refreshing shortly before it expires.
+ *
+ * `authClient.token()` resolves to `{ data: { session: { token } } }` — the JWT is
+ * nested under `session`, NOT at `data.token`. Reading the wrong path silently
+ * produced `null`, so every API call went out without an Authorization header.
+ */
 export async function getToken() {
   if (cached.token && Date.now() < cached.expiresAt - 60_000) {
     return cached.token;
   }
   try {
     const { data, error } = await authClient.token();
-    if (error || !data?.token) return null;
-    cached = { token: data.token, expiresAt: decodeExpiry(data.token) || Date.now() + 10 * 60_000 };
+    const token = data?.session?.token || data?.token;
+    if (error || !token) return null;
+    cached = { token, expiresAt: decodeExpiry(token) || Date.now() + 10 * 60_000 };
     return cached.token;
   } catch {
     return null;
