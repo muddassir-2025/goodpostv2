@@ -6,10 +6,10 @@ import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import Avatar from "../components/Avatar";
 import FloatingMenu from "../components/FloatingMenu";
-import { ArrowLeftIcon, EditIcon, TrashIcon, CloseIcon, DotsIcon, SearchIcon } from "../components/ui/Icons";
+import { ArrowLeftIcon, EditIcon, TrashIcon, CloseIcon, DotsIcon, SearchIcon, ImageIcon } from "../components/ui/Icons";
 import messageService from "../services/message";
 import postService from "../services/post";
-import { formatRelativeTime, getHandle } from "../lib/ui";
+import { formatRelativeTime, getHandle, getFileUrl } from "../lib/ui";
 
 export default function Chat() {
   const { conversationId } = useParams();
@@ -29,6 +29,11 @@ export default function Chat() {
   const [menuOpenId, setMenuOpenId] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState("");
+  const [pendingImage, setPendingImage] = useState(null); // { key, previewUrl }
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [lightboxSrc, setLightboxSrc] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -119,7 +124,10 @@ export default function Chat() {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || sending || !user) return;
+    if (!user) return;
+    // An attachment alone is a valid message, so text is no longer mandatory.
+    const imageId = editingMessageId ? null : (pendingImage?.key || null);
+    if ((!newMessage.trim() && !imageId) || sending || uploadingAttachment) return;
 
     const text = newMessage.trim();
     setNewMessage("");
@@ -130,6 +138,7 @@ export default function Chat() {
       try {
         const actualMsg = await messageService.editMessage(editingMessageId, text);
         setMessages(prev => prev.map(m => m.$id === editingMessageId ? actualMsg : m));
+        setPendingImage(null);
         setEditingMessageId(null);
       } catch (err) {
         console.error("Failed to edit", err);
@@ -148,15 +157,17 @@ export default function Chat() {
       senderId: user.$id,
       text,
       createdAt: new Date().toISOString(),
+      imageId,
       seen: false,
     };
     
     setMessages(prev => [...prev, tempMsg]);
 
     try {
-      const actualMsg = await messageService.sendMessage(conversationId, user.$id, text, tempId);
+      const actualMsg = await messageService.sendMessage(conversationId, user.$id, text, tempId, imageId);
       // Replace temp with actual confirmed message
       setMessages(prev => prev.map(m => m.$id === tempId ? actualMsg : m));
+      setPendingImage(null);
     } catch (err) {
       console.error("Failed to send", err);
       toast("Failed to send message: " + err.message, "error");
@@ -164,6 +175,23 @@ export default function Chat() {
       setMessages(prev => prev.filter(m => m.$id !== tempId));
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleAttachFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // let the same file be re-selected after a removal
+    if (!file) return;
+
+    setUploadingAttachment(true);
+    setUploadProgress(0);
+    try {
+      const uploaded = await postService.uploadImage(file, { onProgress: setUploadProgress });
+      setPendingImage({ key: uploaded.key, previewUrl: getFileUrl(uploaded.key) });
+    } catch (err) {
+      toast("Failed to attach image: " + err.message, "error");
+    } finally {
+      setUploadingAttachment(false);
     }
   };
 
@@ -219,7 +247,7 @@ export default function Chat() {
   };
  
   const filteredMessages = messages.filter(m => 
-    m.text.toLowerCase().includes(chatSearchQuery.toLowerCase())
+    (m.text || "").toLowerCase().includes(chatSearchQuery.toLowerCase())
   );
 
   if (!user) return null;
@@ -355,6 +383,20 @@ export default function Chat() {
                                 : "bg-white/[0.07] text-zinc-100 backdrop-blur-md rounded-bl-sm border border-white/[0.05]"
                             }`}
                           >
+                            {msg.imageId && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); setLightboxSrc(getFileUrl(msg.imageId)); }}
+                                className="mb-1.5 block overflow-hidden rounded-xl"
+                              >
+                                <img
+                                  src={getFileUrl(msg.imageId)}
+                                  alt="Chat attachment"
+                                  loading="lazy"
+                                  className="max-h-64 w-auto max-w-[260px] object-cover"
+                                />
+                              </button>
+                            )}
                             {msg.text}
                             {isMe && msg.seen && !isDeleted && (
                               <span className="absolute -bottom-4 right-0 text-[9px] text-blue-400 font-bold uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Seen</span>
@@ -457,7 +499,48 @@ export default function Chat() {
           </motion.div>
         )}
  
+        {uploadingAttachment && (
+          <div className="mb-3 flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-blue-400">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/10 border-t-blue-400" />
+            Uploading image {uploadProgress}%
+          </div>
+        )}
+
+        {pendingImage && !uploadingAttachment && (
+          <div className="mb-3 flex items-center gap-3">
+            <div className="relative">
+              <img src={pendingImage.previewUrl} alt="Attachment preview" className="h-16 w-16 rounded-xl border border-white/10 object-cover" />
+              <button
+                type="button"
+                onClick={() => setPendingImage(null)}
+                aria-label="Remove attachment"
+                className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-black/80 text-white"
+              >
+                <CloseIcon className="h-3 w-3" />
+              </button>
+            </div>
+            <span className="text-[11px] font-medium text-white/40">Image ready to send</span>
+          </div>
+        )}
+
         <form onSubmit={handleSend} className="flex gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAttachFile}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadingAttachment || Boolean(editingMessageId)}
+            title="Attach image"
+            aria-label="Attach image"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] text-white/50 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-30"
+          >
+            <ImageIcon className="h-5 w-5" />
+          </button>
           <div className="relative flex-1 group">
             <input
               type="text"
@@ -469,7 +552,7 @@ export default function Chat() {
           </div>
           <button
             type="submit"
-            disabled={!newMessage.trim() || sending}
+            disabled={(!newMessage.trim() && !pendingImage) || sending || uploadingAttachment}
             className={`shrink-0 w-12 h-12 flex items-center justify-center rounded-2xl font-black transition-all duration-300 transform active:scale-95 ${
               editingMessageId 
                 ? "bg-white text-black hover:bg-zinc-200"
@@ -485,6 +568,29 @@ export default function Chat() {
           </button>
         </form>
       </footer>
+
+      {/* Full-screen image preview */}
+      <AnimatePresence>
+        {lightboxSrc && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxSrc(null)}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          >
+            <img src={lightboxSrc} alt="Chat attachment" className="max-h-[90vh] max-w-full rounded-2xl object-contain" />
+            <button
+              type="button"
+              onClick={() => setLightboxSrc(null)}
+              aria-label="Close image"
+              className="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white"
+            >
+              <CloseIcon className="h-5 w-5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
  
     </div>
   );

@@ -47,6 +47,7 @@ const FIELD_MAPS = {
     created_at: "$createdAt",
     conversation_id: "conversationId",
     sender_id: "senderId",
+    image_id: "imageId",
   },
   notifications: {
     id: "$id",

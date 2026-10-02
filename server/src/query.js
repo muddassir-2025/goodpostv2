@@ -55,6 +55,7 @@ const COLUMNS = {
     conversationId: "conversation_id",
     senderId: "sender_id",
     text: "text",
+    imageId: "image_id",
     seen: "seen",
   },
   notifications: {

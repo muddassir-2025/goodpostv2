@@ -57,8 +57,13 @@ class MessageService {
     }
   }
 
-  async sendMessage(conversationId, senderId, text, messageId) {
-    return api.post("/api/messages", { conversationId, text, messageId: messageId || null });
+  async sendMessage(conversationId, senderId, text, messageId, imageId) {
+    return api.post("/api/messages", {
+      conversationId,
+      text: text || "",
+      messageId: messageId || null,
+      imageId: imageId || null,
+    });
   }
 
   async markSeen(conversationId) {

@@ -46,6 +46,11 @@ test("multiple where clauses are ANDed with increasing parameter indexes", () =>
   assert.deepEqual(q.params, [true, "u1"]);
 });
 
+test("messages expose imageId in the column whitelist", () => {
+  const q = buildQuery("messages", [{ method: "isNotNull", attribute: "imageId" }]);
+  assert.equal(q.where, "WHERE image_id IS NOT NULL");
+});
+
 test("unknown attributes are rejected — the SQL injection guard", () => {
   assert.throws(
     () => buildQuery("posts", [{ method: "equal", attribute: "id; DROP TABLE posts", values: ["x"] }]),

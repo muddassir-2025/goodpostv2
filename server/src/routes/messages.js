@@ -126,22 +126,26 @@ router.get("/messages", requireAuth, async (req, res) => {
 
 router.post("/messages", requireAuth, async (req, res) => {
   try {
-    const { conversationId, text, messageId = null } = req.body || {};
-    if (!conversationId || !text) {
-      return res.status(400).json({ error: "conversationId and text are required" });
+    const { conversationId, messageId = null, imageId = null } = req.body || {};
+    const text = typeof req.body?.text === "string" ? req.body.text : "";
+    // A message needs real content: text, an attached image, or both.
+    if (!conversationId || (!text.trim() && !imageId)) {
+      return res.status(400).json({ error: "conversationId and either text or an image are required" });
     }
 
     const message = await one(
-      `INSERT INTO messages (id, conversation_id, sender_id, text)
-       VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4) RETURNING *`,
-      [messageId, conversationId, req.userId, text],
+      `INSERT INTO messages (id, conversation_id, sender_id, text, image_id)
+       VALUES (COALESCE($1::uuid, gen_random_uuid()), $2, $3, $4, $5) RETURNING *`,
+      [messageId, conversationId, req.userId, text, imageId],
     );
 
+    // Inbox preview: fall back to a photo label when the message carries no text.
+    const preview = text.trim() || "📷 Photo";
     const conversation = await one(
       `UPDATE conversations
        SET last_message = $2, last_message_at = now(), unread_count = unread_count + 1
        WHERE id = $1 RETURNING *`,
-      [conversationId, text],
+      [conversationId, preview],
     );
 
     const messageDoc = serializeRow("messages", message);

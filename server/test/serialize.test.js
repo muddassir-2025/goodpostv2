@@ -31,6 +31,23 @@ test("post rows come out in Appwrite document shape", () => {
   assert.equal(doc.created_at, undefined);
 });
 
+test("message rows expose the attached image key", () => {
+  const doc = serializeRow("messages", {
+    id: "m1",
+    conversation_id: "c1",
+    sender_id: "u1",
+    text: "",
+    image_id: "images/photo.jpg",
+    created_at: "t1",
+  });
+
+  assert.equal(doc.$id, "m1");
+  assert.equal(doc.conversationId, "c1");
+  assert.equal(doc.senderId, "u1");
+  assert.equal(doc.imageId, "images/photo.jpg");
+  assert.equal(doc.image_id, undefined);
+});
+
 test("serializeRow returns null for a missing row", () => {
   assert.equal(serializeRow("posts", null), null);
 });

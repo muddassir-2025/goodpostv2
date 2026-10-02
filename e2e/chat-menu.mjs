@@ -114,6 +114,43 @@ for (const width of [360, 768, 1280]) {
     await page.waitForTimeout(300);
   }
 
+  // Chat image attachments: the composer uploads, previews, then renders the sent image
+  // as a bubble. Exercised once (widest viewport) to keep the run quick.
+  if (width === 1280 && (await composer.count())) {
+    // 1x1 transparent PNG — enough to pass the magic-byte + moderation pipeline.
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+      "base64",
+    );
+    await page.setInputFiles('input[type="file"][accept="image/*"]', {
+      name: "attach.png",
+      mimeType: "image/png",
+      buffer: png,
+    });
+
+    // Uploading runs through moderation + storage and can take several seconds, so wait
+    // for the preview element rather than guessing at a fixed delay.
+    let preview = true;
+    try {
+      await page.waitForSelector('img[alt="Attachment preview"]', { timeout: 30000 });
+    } catch {
+      preview = false;
+    }
+    check("attachment preview appears after upload", preview, "no preview (moderation or upload failed?)");
+
+    if (preview) {
+      await composer.fill("");
+      await page.click('button[type="submit"]');
+      let bubble = true;
+      try {
+        await page.waitForSelector('img[alt="Chat attachment"]', { timeout: 20000 });
+      } catch {
+        bubble = false;
+      }
+      check("sent image renders as a chat bubble", bubble, `bubbles=${await page.locator('img[alt="Chat attachment"]').count()}`);
+    }
+  }
+
   await ctx.close();
 }
 
