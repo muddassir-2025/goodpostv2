@@ -143,6 +143,7 @@ export default function SinglePost() {
   const isOwner = (user?.$id === post.authorID) || isAdmin;
   const imageSrc = getFileUrl(post.featuredImg);
   const audioSrc = getFileUrl(post.audioId);
+  const videoSrc = getFileUrl(post.videoId);
 
   const handleImageClick = (e) => {
     if (!audioSrc || e.detail !== 2) return;
@@ -247,6 +248,10 @@ export default function SinglePost() {
 
       if (post.audioId) {
         await postService.deleteFile(post.audioId);
+      }
+
+      if (post.videoId) {
+        await postService.deleteFile(post.videoId);
       }
 
       await postService.deletePost(post.$id);
@@ -445,7 +450,17 @@ export default function SinglePost() {
           onClick={handleImageClick}
           className="relative block w-full overflow-hidden bg-black/50 cursor-pointer"
         >
-          {imageSrc ? (
+          {videoSrc ? (
+            <video
+              src={videoSrc}
+              controls
+              playsInline
+              preload="metadata"
+              poster={imageSrc || undefined}
+              onClick={(event) => event.stopPropagation()}
+              className="w-full max-h-[70vh] bg-black"
+            />
+          ) : imageSrc ? (
             <img
               src={imageSrc}
               alt={post.title}

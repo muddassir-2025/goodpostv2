@@ -26,8 +26,8 @@ router.post("/", requireAuth, async (req, res) => {
     const slug = await uniqueSlug(body.slug);
     const row = await one(
       `INSERT INTO posts
-         (title, content, slug, author_id, author_name, featured_img, audio_id, tags, is_published, is_system)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         (title, content, slug, author_id, author_name, featured_img, audio_id, video_id, tags, is_published, is_system)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING *`,
       [
         body.title || "",
@@ -37,6 +37,7 @@ router.post("/", requireAuth, async (req, res) => {
         body.userName || req.profile?.name || "Guest",
         body.imageId || null,
         body.audioId || null,
+        body.videoId || null,
         Array.isArray(body.tags) ? body.tags : [],
         body.status ? body.status === "public" : true,
         Boolean(body.isSystem),
@@ -121,6 +122,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
       slug: "slug",
       featuredImg: "featured_img",
       audioId: "audio_id",
+      videoId: "video_id",
       tags: "tags",
       isPublished: "is_published",
       likeCount: "like_count",
@@ -163,7 +165,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
     }
 
     await query("DELETE FROM posts WHERE id = $1", [id]);
-    for (const key of [existing.featured_img, existing.audio_id]) {
+    for (const key of [existing.featured_img, existing.audio_id, existing.video_id]) {
       if (key) await deleteObject(key).catch(() => null);
     }
     res.json({ success: true });
@@ -185,7 +187,7 @@ router.post("/:id/report", requireAuth, async (req, res) => {
     const next = [...reportedBy, req.userId];
     if (next.length >= 5) {
       await query("DELETE FROM posts WHERE id = $1", [id]);
-      for (const key of [post.featured_img, post.audio_id]) {
+      for (const key of [post.featured_img, post.audio_id, post.video_id]) {
         if (key) await deleteObject(key).catch(() => null);
       }
       return res.json({ status: "deleted" });

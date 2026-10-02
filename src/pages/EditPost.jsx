@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import PostSkeleton from "../components/PostSkeleton";
 import UploadModal from "../components/UploadModal";
-import { AudioIcon, ImageIcon, CloseIcon } from "../components/ui/Icons";
+import { AudioIcon, ImageIcon, PlayIcon, CloseIcon } from "../components/ui/Icons";
 import postService from "../services/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
 import { CATEGORIES, searchCategories } from "../lib/categories";
@@ -17,10 +17,13 @@ export default function EditPost() {
   const [content, setContent] = useState("");
   const [image, setImage] = useState(null);
   const [audio, setAudio] = useState(null);
+  const [video, setVideo] = useState(null);
   const [oldImageId, setOldImageId] = useState(null);
   const [oldAudioId, setOldAudioId] = useState(null);
+  const [oldVideoId, setOldVideoId] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [audioPreview, setAudioPreview] = useState("");
+  const [videoPreview, setVideoPreview] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(null); // upload %, null when idle/unknown
@@ -44,6 +47,7 @@ export default function EditPost() {
           setContent(post.content || "");
           setOldImageId(post.featuredImg || null);
           setOldAudioId(post.audioId || null);
+          setOldVideoId(post.videoId || null);
           
           // Stored tags are lowercase ids; keep any unknown legacy tag selectable.
           if (post.tags) {
@@ -92,6 +96,18 @@ export default function EditPost() {
     return () => URL.revokeObjectURL(objectUrl);
   }, [audio]);
 
+  useEffect(() => {
+    if (!video) {
+      setVideoPreview("");
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(video);
+    setVideoPreview(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [video]);
+
   async function handleUpdate(event) {
     event.preventDefault();
     setError("");
@@ -105,6 +121,7 @@ export default function EditPost() {
     try {
       let nextImageId = oldImageId;
       let nextAudioId = oldAudioId;
+      let nextVideoId = oldVideoId;
 
       // Upload immediately; the API moderates before anything is stored. See CreatePost.
       if (image) {
@@ -130,6 +147,17 @@ export default function EditPost() {
         }
       }
 
+      if (video) {
+        const uploadedVideo = await postService.uploadVideo(video, {
+          onProgress: (percent) => setProgress(percent),
+        });
+        nextVideoId = uploadedVideo?.$id || uploadedVideo?.key || oldVideoId;
+
+        if (oldVideoId && nextVideoId !== oldVideoId) {
+          await postService.deleteFile(oldVideoId);
+        }
+      }
+
       const resolvedTitle =
         title.trim() || content.trim().split(/\s+/).slice(0, 6).join(" ") || "updated-post";
 
@@ -139,6 +167,7 @@ export default function EditPost() {
         slug: createSlug(resolvedTitle) || `post-${Date.now()}`,
         featuredImg: nextImageId,
         audioId: nextAudioId,
+        videoId: nextVideoId,
         tags: selectedTags.map(t => t.toLowerCase()),
         status, // ✅ Update privacy status
       });
@@ -174,6 +203,7 @@ export default function EditPost() {
 
   const resolvedImagePreview = imagePreview || getFileUrl(oldImageId);
   const resolvedAudioPreview = audioPreview || getFileUrl(oldAudioId);
+  const resolvedVideoPreview = videoPreview || getFileUrl(oldVideoId);
 
   return (
     <div className="flex min-h-[calc(100vh-7rem)] items-center justify-center py-4">
@@ -185,7 +215,14 @@ export default function EditPost() {
         <form onSubmit={handleUpdate} className="grid gap-6 lg:grid-cols-[1fr,1.05fr]">
           <div className="space-y-4">
             <div className="overflow-hidden rounded-[28px] border border-white/10 bg-black/35 p-3">
-              {resolvedImagePreview ? (
+              {resolvedVideoPreview ? (
+                <video
+                  src={resolvedVideoPreview}
+                  controls
+                  playsInline
+                  className="aspect-[4/5] w-full rounded-[22px] bg-black object-contain"
+                />
+              ) : resolvedImagePreview ? (
                 <img
                   src={resolvedImagePreview}
                   alt="Preview"
@@ -295,7 +332,7 @@ export default function EditPost() {
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               <label className="cursor-pointer rounded-[24px] border border-white/10 bg-black/35 p-4 transition hover:border-white/20 hover:bg-white/5">
                 <div className="flex items-center gap-3">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/8 text-zinc-200">
@@ -333,6 +370,26 @@ export default function EditPost() {
                   accept="audio/*"
                   className="hidden"
                   onChange={(event) => setAudio(event.target.files?.[0] || null)}
+                />
+              </label>
+
+              <label className="cursor-pointer rounded-[24px] border border-white/10 bg-black/35 p-4 transition hover:border-white/20 hover:bg-white/5">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/8 text-zinc-200">
+                    <PlayIcon className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">Replace video</p>
+                    <p className="text-xs text-zinc-500">
+                      {video ? video.name : "Keep current video"}
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(event) => setVideo(event.target.files?.[0] || null)}
                 />
               </label>
             </div>

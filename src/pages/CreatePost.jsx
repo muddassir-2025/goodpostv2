@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import UploadModal from "../components/UploadModal";
-import { AudioIcon, ImageIcon, ShieldIcon, XIcon, CloseIcon } from "../components/ui/Icons";
+import { AudioIcon, ImageIcon, PlayIcon, ShieldIcon, XIcon, CloseIcon } from "../components/ui/Icons";
 import postService from "../services/post";
 import { createSlug, containsForbiddenWord, getFileUrl } from "../lib/ui";
 import { CATEGORIES, TAG_LABELS, searchCategories } from "../lib/categories";
@@ -16,8 +16,10 @@ export default function CreatePost() {
   const [content, setContent] = useState("");
   const [image, setImage] = useState(null);
   const [audio, setAudio] = useState(null);
+  const [video, setVideo] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [audioPreview, setAudioPreview] = useState("");
+  const [videoPreview, setVideoPreview] = useState("");
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(null); // upload %, null when idle/unknown
   const [error, setError] = useState("");
@@ -45,6 +47,15 @@ export default function CreatePost() {
   }, [audio]);
 
   useEffect(() => {
+    if (!video) return setVideoPreview("");
+
+    const url = URL.createObjectURL(video);
+    setVideoPreview(url);
+
+    return () => URL.revokeObjectURL(url);
+  }, [video]);
+
+  useEffect(() => {
     if (error) {
       const timer = setTimeout(() => {
         setError("");
@@ -70,6 +81,7 @@ export default function CreatePost() {
     try {
       let imageId = null;
       let audioId = null;
+      let videoId = null;
 
       // Upload straight away and let the server moderate. The in-browser NSFW model used
       // to run first and gated publishing behind a multi-megabyte model download, which
@@ -89,6 +101,13 @@ export default function CreatePost() {
         audioId = res?.$id || res?.key;
       }
 
+      if (video) {
+        const res = await postService.uploadVideo(video, {
+          onProgress: (percent) => setProgress(percent),
+        });
+        videoId = res?.$id || res?.key;
+      }
+
       const resolvedTitle =
         title.trim() ||
         content.trim().split(/\s+/).slice(0, 6).join(" ") ||
@@ -104,6 +123,7 @@ export default function CreatePost() {
         userName: user.name,
         imageId,
         audioId,
+        videoId,
 
         // ✅ IMPORTANT FIX
         tags: cleanedTags,
@@ -140,7 +160,7 @@ export default function CreatePost() {
     <div className="flex min-h-[calc(100vh-7rem)] items-center justify-center py-4">
       <UploadModal
         title="Create post"
-        description="Upload a photo or an audio drop, add a caption, and publish it into the feed."
+        description="Upload a photo, video, or audio drop, add a caption, and publish it into the feed."
         onClose={() => navigate("/")}
       >
         <form
@@ -151,7 +171,15 @@ export default function CreatePost() {
           {/* LEFT SIDE */}
           <div className="space-y-4">
             <div className="overflow-hidden rounded-[28px] border border-white/10 bg-black/35 p-3">
-              {imagePreview ? (
+              {videoPreview ? (
+                <video
+                  id="post-preview-video"
+                  src={videoPreview}
+                  controls
+                  playsInline
+                  className="aspect-[4/5] w-full rounded-[22px] bg-black object-contain"
+                />
+              ) : imagePreview ? (
                 <img
                   id="post-preview-img"
                   crossOrigin="anonymous"
@@ -272,7 +300,7 @@ export default function CreatePost() {
             </div>
 
             {/* UPLOADS */}
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               <label className="cursor-pointer rounded-[24px] border border-white/10 bg-black/35 p-4 transition hover:border-white/20 hover:bg-white/5">
                 <div className="flex items-center gap-3">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/8 text-zinc-200">
@@ -316,6 +344,29 @@ export default function CreatePost() {
                   accept="audio/*"
                   className="hidden"
                   onChange={(e) => setAudio(e.target.files?.[0] || null)}
+                />
+              </label>
+
+              <label className="cursor-pointer rounded-[24px] border border-white/10 bg-black/35 p-4 transition hover:border-white/20 hover:bg-white/5">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/8 text-zinc-200">
+                    <PlayIcon className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      Upload video
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      {video ? video.name : "MP4, WebM, or MOV"}
+                    </p>
+                  </div>
+                </div>
+
+                <input
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(e) => setVideo(e.target.files?.[0] || null)}
                 />
               </label>
             </div>

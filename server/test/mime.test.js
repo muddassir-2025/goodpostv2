@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sniffMime, normalizeMime, mimeMatches } from "../src/mime.js";
+import { sniffMime, normalizeMime, mimeMatches, sniffVideoMime, videoMimeMatches } from "../src/mime.js";
 
 const pad = (head, total = 16) => Buffer.concat([Buffer.from(head, "latin1"), Buffer.alloc(Math.max(0, total - head.length))]);
 
@@ -16,6 +16,10 @@ const SAMPLES = {
   html: Buffer.from("<html><script>alert(1)</script></html>"),
   svg: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>'),
   zip: Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.alloc(12)]),
+  mp4: Buffer.concat([Buffer.alloc(4), Buffer.from("ftyp"), Buffer.from("mp42"), Buffer.alloc(8)]),
+  mov: Buffer.concat([Buffer.alloc(4), Buffer.from("ftyp"), Buffer.from("qt  "), Buffer.alloc(8)]),
+  m4a: Buffer.concat([Buffer.alloc(4), Buffer.from("ftyp"), Buffer.from("M4A "), Buffer.alloc(8)]),
+  webmVideo: Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.from("webm"), Buffer.alloc(8)]),
 };
 
 test("sniffs each supported image format", () => {
@@ -67,4 +71,41 @@ test("normalizeMime collapses equivalent spellings", () => {
 
 test("mimeMatches treats audio/mpeg and audio/mp3 as the same type", () => {
   assert.equal(mimeMatches("audio/mp3", SAMPLES.mp3).ok, true);
+});
+
+test("sniffVideoMime detects the common video containers", () => {
+  assert.equal(sniffVideoMime(SAMPLES.mp4), "video/mp4");
+  assert.equal(sniffVideoMime(SAMPLES.mov), "video/quicktime");
+  assert.equal(sniffVideoMime(SAMPLES.webmVideo), "video/webm");
+});
+
+test("sniffVideoMime does not report audio-only MP4 or junk as video", () => {
+  assert.equal(sniffVideoMime(SAMPLES.m4a), null);
+  assert.equal(sniffVideoMime(SAMPLES.jpeg), null);
+  assert.equal(sniffVideoMime(Buffer.alloc(0)), null);
+});
+
+test("videoMimeMatches accepts a truthful declaration", () => {
+  assert.equal(videoMimeMatches("video/mp4", SAMPLES.mp4).ok, true);
+  assert.equal(videoMimeMatches("video/webm", SAMPLES.webmVideo).ok, true);
+});
+
+test("videoMimeMatches accepts mp4/mov as the same container", () => {
+  assert.equal(videoMimeMatches("video/quicktime", SAMPLES.mp4).ok, true);
+  assert.equal(videoMimeMatches("video/mp4", SAMPLES.mov).ok, true);
+});
+
+test("videoMimeMatches rejects a lying declaration and unreadable bytes", () => {
+  const lie = videoMimeMatches("video/mp4", SAMPLES.jpeg);
+  assert.equal(lie.ok, false);
+  assert.match(lie.reason, /Unrecognized video format/);
+
+  const mismatch = videoMimeMatches("video/webm", SAMPLES.mp4);
+  assert.equal(mismatch.ok, false);
+  assert.match(mismatch.reason, /do not match/);
+});
+
+test("normalizeMime maps video aliases", () => {
+  assert.equal(normalizeMime("video/x-m4v"), "video/mp4");
+  assert.equal(normalizeMime("video/mov"), "video/quicktime");
 });

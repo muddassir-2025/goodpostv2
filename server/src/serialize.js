@@ -10,6 +10,7 @@ const FIELD_MAPS = {
     author_name: "authorName",
     featured_img: "featuredImg",
     audio_id: "audioId",
+    video_id: "videoId",
     is_published: "isPublished",
     like_count: "likeCount",
     comment_count: "commentCount",

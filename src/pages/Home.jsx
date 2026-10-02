@@ -8,11 +8,12 @@ import PostSkeleton from "../components/PostSkeleton";
 import StoryBar from "../components/StoryBar";
 import { SearchIcon } from "../components/ui/Icons";
 import postService from "../services/post";
+import storyService from "../services/story";
 import followService from "../services/follow";
 import { syncFavorite, syncLike } from "../lib/engagement";
 import { confirm, toast } from "../confirmService";
 import { fetchFeedPosts, filterPosts, sortPosts } from "../lib/posts";
-import { buildStories } from "../lib/ui";
+import { groupStories } from "../lib/stories";
 import { motion, AnimatePresence } from "framer-motion";
 
 const filters = [
@@ -27,8 +28,8 @@ export default function Home() {
   const navigate = useNavigate();
 
   const [posts, setPosts] = useState([]);
-  const [stories, setStories] = useState([]); 
-  const [allowedUsers, setAllowedUsers] = useState(new Set()); // ✅ NEW
+  const [storyGroups, setStoryGroups] = useState([]);
+  const [storyBusy, setStoryBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -41,6 +42,7 @@ export default function Home() {
   const PAGE_SIZE = 10;
   
   const loaderRef = useRef(null);
+  const storyInputRef = useRef(null);
   const deferredSearch = useDeferredValue(search);
 
   const loadPosts = async (isInitial = false) => {
@@ -60,6 +62,7 @@ export default function Home() {
 
       if (mediaFilter === "images") queries.push(Query.isNotNull("featuredImg"));
       if (mediaFilter === "audio") queries.push(Query.isNotNull("audioId"));
+      if (mediaFilter === "videos") queries.push(Query.isNotNull("videoId"));
       
       if (filter === "following" && user) {
         const followingIds = await followService.getFollowing(user.$id);
@@ -76,11 +79,6 @@ export default function Home() {
 
       if (isInitial) {
         setPosts(data);
-        const followingIds = user ? await followService.getFollowing(user.$id) : [];
-        const allowed = user ? new Set([user.$id, ...followingIds]) : new Set();
-        const storyPosts = data.filter(p => allowed.has(p.authorID));
-        setStories(buildStories(storyPosts, user).sort((a,b) => Number(b.isOwn) - Number(a.isOwn)));
-        setAllowedUsers(allowed);
       } else {
         setPosts(prev => [...prev, ...data]);
       }
@@ -102,6 +100,48 @@ export default function Home() {
     setHasMore(true);
     loadPosts(true);
   }, [user, filter, mediaFilter, deferredSearch]);
+
+  // Stories are fetched separately from the feed: they expire after 24h and are shown
+  // even when the viewer has not posted anything themselves.
+  const loadStories = useCallback(async () => {
+    try {
+      const response = await storyService.getStories();
+      setStoryGroups(groupStories(response?.documents || [], user));
+    } catch {
+      // A story failure must never break the feed.
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadStories();
+  }, [loadStories]);
+
+  async function handleStoryFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !user) return;
+
+    setStoryBusy(true);
+    try {
+      const uploaded = await postService.uploadImage(file);
+      const imageId = uploaded?.$id || uploaded?.key;
+      await storyService.createStory(imageId);
+      await loadStories();
+    } catch (err) {
+      setError(err?.message || "Could not add your story.");
+    } finally {
+      setStoryBusy(false);
+    }
+  }
+
+  async function handleDeleteStory(id) {
+    try {
+      await storyService.deleteStory(id);
+      await loadStories();
+    } catch {
+      setError("Could not delete the story.");
+    }
+  }
 
   // ✅ INFINITE SCROLL OBSERVER
   useEffect(() => {
@@ -206,6 +246,10 @@ export default function Home() {
 
       if (post.audioId) {
         await postService.deleteFile(post.audioId);
+      }
+
+      if (post.videoId) {
+        await postService.deleteFile(post.videoId);
       }
 
       await postService.deletePost(post.$id);
@@ -314,6 +358,7 @@ export default function Home() {
           {[
             { id: "all", label: "All" },
             { id: "images", label: "Images" },
+            { id: "videos", label: "Videos" },
             { id: "audio", label: "Audio" }
           ].map((item) => (
             <button
@@ -336,8 +381,22 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ✅ STORIES (FIXED) */}
-      <StoryBar stories={stories} />
+      {/* STORIES */}
+      <input
+        ref={storyInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleStoryFile}
+      />
+      {storyBusy && (
+        <p className="text-xs text-zinc-500">Adding your story…</p>
+      )}
+      <StoryBar
+        groups={storyGroups}
+        onAddStory={() => storyInputRef.current?.click()}
+        onDeleteStory={handleDeleteStory}
+      />
 
       {/* ERROR */}
       {error && (

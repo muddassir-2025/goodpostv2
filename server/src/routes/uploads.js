@@ -3,7 +3,7 @@ import multer from "multer";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { uploadBuffer, deleteObject, publicUrl, thumbKey } from "../storage.js";
 import { requireAuth } from "../auth.js";
-import { mimeMatches } from "../mime.js";
+import { mimeMatches, videoMimeMatches } from "../mime.js";
 import { moderateImage } from "../moderation.js";
 import { bumpMetric } from "../monitoring.js";
 import { storageHealth } from "../storage.js";
@@ -21,6 +21,13 @@ const AUDIO_TYPES = new Set([
   "audio/mp4",
   "audio/aac",
 ]);
+const VIDEO_TYPES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-matroska",
+  "video/x-m4v",
+]);
 
 const EXTENSIONS = {
   "image/jpeg": "jpg",
@@ -35,14 +42,21 @@ const EXTENSIONS = {
   "audio/webm": "webm",
   "audio/mp4": "m4a",
   "audio/aac": "aac",
+  "video/mp4": "mp4",
+  "video/x-m4v": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+  "video/x-matroska": "mkv",
 };
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+// Video is buffered in memory during upload; keep the ceiling low enough for the free tier.
+const MAX_VIDEO_BYTES = 80 * 1024 * 1024;
 
-function makeUploader(allowed) {
+function makeUploader(allowed, maxBytes = MAX_UPLOAD_BYTES) {
   return multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+    limits: { fileSize: maxBytes, files: 1 },
     fileFilter(_req, file, cb) {
       if (!allowed.has(file.mimetype)) {
         return cb(new Error(`Unsupported file type: ${file.mimetype}`));
@@ -54,6 +68,7 @@ function makeUploader(allowed) {
 
 const imageUpload = makeUploader(IMAGE_TYPES);
 const audioUpload = makeUploader(AUDIO_TYPES);
+const videoUpload = makeUploader(VIDEO_TYPES, MAX_VIDEO_BYTES);
 
 // Rate limit per authenticated user, not just per IP, so one account can't flood us.
 const uploadLimiter = rateLimit({
@@ -173,6 +188,24 @@ router.post("/audio", requireAuth, uploadLimiter, audioUpload.single("file"), as
   }
 });
 
+// Video posts. Container sniffing only — we can't scan video frames, so an upload that
+// passes the byte check is published as-is (same trust model as audio).
+router.post("/video", requireAuth, uploadLimiter, videoUpload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file provided" });
+
+    const match = videoMimeMatches(req.file.mimetype, req.file.buffer);
+    if (!match.ok) {
+      bumpMetric("uploadsRejected");
+      return res.status(400).json({ error: match.reason });
+    }
+
+    return await storeAndRespond(req, res, "videos");
+  } catch (error) {
+    return storageFailure(res, "video upload error", error);
+  }
+});
+
 router.post("/delete", requireAuth, async (req, res) => {
   try {
     const key = req.body?.key;
@@ -184,9 +217,10 @@ router.post("/delete", requireAuth, async (req, res) => {
 });
 
 // Multer errors (bad type / too large) reach the error handler as 500s by default.
-router.use((error, _req, res, _next) => {
+router.use((error, req, res, _next) => {
   if (error?.code === "LIMIT_FILE_SIZE") {
-    return res.status(413).json({ error: "File is too large (max 25 MB)" });
+    const limit = req.originalUrl?.includes("/video") ? "80 MB" : "25 MB";
+    return res.status(413).json({ error: `File is too large (max ${limit})` });
   }
   res.status(400).json({ error: error.message || "Upload failed" });
 });

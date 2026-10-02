@@ -138,6 +138,7 @@ export default function TagFeed() {
     try {
       if (post.featuredImg) await postService.deleteFile(post.featuredImg);
       if (post.audioId) await postService.deleteFile(post.audioId);
+      if (post.videoId) await postService.deleteFile(post.videoId);
       await postService.deletePost(post.$id);
       setPosts((prev) => prev.filter((p) => p.$id !== post.$id));
     } catch (err) {

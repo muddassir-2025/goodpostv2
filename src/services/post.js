@@ -47,6 +47,12 @@ class PostService {
     return api.upload("/api/uploads/audio", form, onProgress);
   }
 
+  async uploadVideo(file, { onProgress } = {}) {
+    const form = new FormData();
+    form.append("file", file);
+    return api.upload("/api/uploads/video", form, onProgress);
+  }
+
   async deleteFile(fileKey) {
     if (!fileKey) return null;
     return api.post("/api/uploads/delete", { key: fileKey });

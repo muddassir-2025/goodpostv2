@@ -22,6 +22,8 @@ export function normalizeMime(mime = "") {
     "audio/x-wav": "audio/wav",
     "audio/wave": "audio/wav",
     "image/jpg": "image/jpeg",
+    "video/x-m4v": "video/mp4",
+    "video/mov": "video/quicktime",
   };
   return aliases[value] || value;
 }
@@ -68,6 +70,58 @@ export function mimeMatches(declared, buffer) {
   const detected = sniffMime(buffer);
   if (!detected) return { ok: false, detected: null, reason: "Unrecognized file format" };
   if (normalizeMime(declared) !== normalizeMime(detected)) {
+    return {
+      ok: false,
+      detected,
+      reason: `File contents (${detected}) do not match the declared type (${declared})`,
+    };
+  }
+  return { ok: true, detected };
+}
+
+// ISO base media brands that carry video. `M4A ` / `M4B ` are audio-only and excluded.
+const VIDEO_BRANDS = new Set([
+  "isom", "iso2", "iso5", "iso6", "mp41", "mp42", "avc1", "dash",
+  "M4V ", "M4VH", "3gp4", "3gp5", "3g2a", "MSNV",
+]);
+
+/**
+ * Detect a video container from magic bytes. Video containers are not fully
+ * distinguishable from a matching audio-only file without parsing tracks, so callers
+ * combine this with the declared MIME type rather than trusting it alone.
+ */
+export function sniffVideoMime(buffer) {
+  if (!buffer || buffer.length < 12) return null;
+
+  // ISO base media (MP4 / MOV).
+  if (ascii(buffer, 4, 4) === "ftyp") {
+    const brand = ascii(buffer, 8, 4);
+    if (brand === "qt  ") return "video/quicktime";
+    if (VIDEO_BRANDS.has(brand)) return "video/mp4";
+    // Unknown non-audio brand: assume the common MP4 container.
+    if (!brand.startsWith("M4A") && !brand.startsWith("M4B")) return "video/mp4";
+  }
+
+  // Matroska / WebM (EBML header).
+  if (startsWith(buffer, [0x1a, 0x45, 0xdf, 0xa3])) {
+    const head = ascii(buffer, 0, Math.min(buffer.length, 64));
+    if (head.includes("webm")) return "video/webm";
+    return "video/x-matroska";
+  }
+
+  return null;
+}
+
+/** Video analogue of `mimeMatches`: mp4 and mov share the ISO-BMFF container. */
+export function videoMimeMatches(declared, buffer) {
+  const detected = sniffVideoMime(buffer);
+  if (!detected) return { ok: false, detected: null, reason: "Unrecognized video format" };
+
+  const declaredType = normalizeMime(declared);
+  const isoContainer = (type) => type === "video/mp4" || type === "video/quicktime" || type === "video/x-m4v";
+  const matches = declaredType === detected || (isoContainer(declaredType) && isoContainer(detected));
+
+  if (!matches) {
     return {
       ok: false,
       detected,

@@ -13,6 +13,7 @@ import { Query } from "../lib/appwriteCompat";
 const FILTERS = [
   { id: "all",    label: "All"    },
   { id: "images", label: "Images" },
+  { id: "videos", label: "Videos" },
   { id: "audio",  label: "Audio"  },
 ];
 
@@ -38,9 +39,9 @@ export default function Feed() {
         ]);
         const followedSet = new Set(followingIds || []);
         const filtered    = data.filter((post) => followedSet.has(post.authorID));
-        const ordered     = sortPosts(filtered, "latest").sort(
-          (a, b) => Number(Boolean(b.audioId)) - Number(Boolean(a.audioId))
-        );
+        // Surface richer media first: video, then audio, then plain images.
+        const weight = (post) => (post.videoId ? 2 : 0) + (post.audioId ? 1 : 0);
+        const ordered = sortPosts(filtered, "latest").sort((a, b) => weight(b) - weight(a));
         if (active) setPosts(ordered);
       } catch {
         if (active) setError("Could not load posts from people you follow.");
@@ -86,6 +87,7 @@ export default function Feed() {
     try {
       if (post.featuredImg) await postService.deleteFile(post.featuredImg);
       if (post.audioId)     await postService.deleteFile(post.audioId);
+      if (post.videoId)     await postService.deleteFile(post.videoId);
       await postService.deletePost(post.$id);
       setPosts((cur) => cur.filter((item) => item.$id !== post.$id));
     } catch {
@@ -109,6 +111,7 @@ export default function Feed() {
 
   const visiblePosts = posts.filter((p) => {
     if (mediaFilter === "images") return !!p.featuredImg;
+    if (mediaFilter === "videos") return !!p.videoId;
     if (mediaFilter === "audio")  return !!p.audioId;
     return true;
   });

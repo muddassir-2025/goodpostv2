@@ -13,6 +13,7 @@ const COLUMNS = {
     authorName: "author_name",
     featuredImg: "featured_img",
     audioId: "audio_id",
+    videoId: "video_id",
     tags: "tags",
     isPublished: "is_published",
     likeCount: "like_count",

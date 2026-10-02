@@ -45,6 +45,7 @@ const PostCard = memo(({
   const imageSrc = getFileUrl(post.featuredImg);
   const thumbSrc = post.featuredImg ? getFileUrl(post.featuredImg, { thumb: true }) : "";
   const audioSrc = getFileUrl(post.audioId);
+  const videoSrc = getFileUrl(post.videoId);
   const captionPreview =
     post.content?.length > 150 ? `${post.content.slice(0, 150).trim()}...` : post.content;
 
@@ -190,12 +191,24 @@ const PostCard = memo(({
         </div>
       </div>
 
-      {(imageSrc || audioSrc) ? (
+      {(videoSrc || imageSrc || audioSrc) ? (
         <div
           onClick={handleImageClick}
           className="relative block w-full overflow-hidden rounded-[26px] bg-black/50 cursor-pointer"
         >
-          {imageSrc ? (
+          {videoSrc ? (
+            // Video posts take precedence in the media slot. Stopping propagation on the
+            // player keeps clicks on its controls from also opening the post.
+            <video
+              src={videoSrc}
+              controls
+              playsInline
+              preload="metadata"
+              poster={imageSrc || undefined}
+              onClick={(event) => event.stopPropagation()}
+              className="max-h-[450px] w-full bg-black"
+            />
+          ) : imageSrc ? (
             <img
               src={thumbSrc || imageSrc}
               alt={post.title}
