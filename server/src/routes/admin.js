@@ -4,6 +4,7 @@ import { requireAuth, requireAdmin } from "../auth.js";
 import { serializeUser, serializeRow } from "../serialize.js";
 import { metrics } from "../monitoring.js";
 import { moderationState } from "../moderation.js";
+import { storageHealth } from "../storage.js";
 
 const router = Router();
 
@@ -103,6 +104,8 @@ router.get("/stats", async (_req, res) => {
       },
       process: metrics(),
       moderation: moderationState(),
+      // Admin-only, so the full problem list is safe to expose here.
+      storage: storageHealth(),
     });
   } catch (error) {
     console.error("admin stats error:", error.message);

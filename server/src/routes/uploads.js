@@ -6,6 +6,7 @@ import { requireAuth } from "../auth.js";
 import { mimeMatches } from "../mime.js";
 import { moderateImage } from "../moderation.js";
 import { bumpMetric } from "../monitoring.js";
+import { storageHealth } from "../storage.js";
 
 const router = Router();
 
@@ -68,6 +69,24 @@ function extensionFor(file) {
   return EXTENSIONS[file.mimetype] || "";
 }
 
+/**
+ * A storage failure is environmental (endpoint/credentials), not the caller's
+ * fault, so it is a retryable 503 rather than a 500 — and we log the real
+ * reason plus any configuration problem so it is never a mystery in the logs.
+ */
+function storageFailure(res, label, error) {
+  console.error(`${label}:`, error.message);
+  const health = storageHealth();
+  if (!health.ok) {
+    console.error(`[storage] misconfigured — ${health.problems.join("; ")}`);
+  }
+  return res.status(503).json({
+    error: health.ok
+      ? "Storage is temporarily unavailable. Please try again."
+      : "Image storage is not configured correctly.",
+  });
+}
+
 async function storeAndRespond(req, res, prefix) {
   const key = await uploadBuffer(req.file.buffer, {
     contentType: req.file.mimetype,
@@ -108,8 +127,7 @@ router.post("/image", requireAuth, uploadLimiter, imageUpload.single("file"), as
     // 3. Only now does it get published.
     return await storeAndRespond(req, res, "images");
   } catch (error) {
-    console.error("image upload error:", error.message);
-    return res.status(500).json({ error: "Upload failed" });
+    return storageFailure(res, "image upload error", error);
   }
 });
 
@@ -125,8 +143,7 @@ router.post("/audio", requireAuth, uploadLimiter, audioUpload.single("file"), as
 
     return await storeAndRespond(req, res, "audio");
   } catch (error) {
-    console.error("audio upload error:", error.message);
-    return res.status(500).json({ error: "Upload failed" });
+    return storageFailure(res, "audio upload error", error);
   }
 });
 
@@ -136,8 +153,7 @@ router.post("/delete", requireAuth, async (req, res) => {
     if (key) await deleteObject(key);
     res.json({ success: true });
   } catch (error) {
-    console.error("deleteFile error:", error.message);
-    res.status(500).json({ error: "Failed to delete file" });
+    return storageFailure(res, "deleteFile error", error);
   }
 });
 

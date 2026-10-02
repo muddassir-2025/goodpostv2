@@ -5,9 +5,18 @@ import { pool } from "./db.js";
 import { setupRealtime } from "./realtime.js";
 import { initMonitoring } from "./monitoring.js";
 import { warmModeration } from "./moderation.js";
+import { storageHealth } from "./storage.js";
 
 validateEnvOrExit();
 initMonitoring();
+
+// Fail loudly at boot. A bad storage endpoint otherwise only surfaces as a
+// confusing 500 on the first upload, minutes later.
+const storage = storageHealth();
+if (!storage.ok) {
+  console.error("⚠️  Neon Object Storage is misconfigured:");
+  for (const problem of storage.problems) console.error(`   - ${problem}`);
+}
 
 const app = createApp();
 const server = http.createServer(app);

@@ -26,7 +26,9 @@ test("unknown routes return a JSON 404", async () => {
 test("protected routes reject anonymous requests", async () => {
   const res = await fetch(`${base}/api/notifications`);
   assert.equal(res.status, 401);
-  assert.deepEqual(await res.json(), { error: "Authentication required" });
+  const body = await res.json();
+  assert.equal(body.error, "Authentication required");
+  assert.equal(body.reason, "missing_token");
 });
 
 test("admin routes reject anonymous requests", async () => {
@@ -41,6 +43,10 @@ test("admin routes reject a non-admin even when authenticated", async () => {
     headers: { Authorization: "Bearer not-a-real-token" },
   });
   assert.equal(res.status, 401);
+  // Must be distinguishable from "not signed in", so a backend auth problem
+  // doesn't masquerade as a broken login.
+  const body = await res.json();
+  assert.equal(body.reason, "invalid_token");
 });
 
 test("a disallowed Origin is refused by CORS", async () => {

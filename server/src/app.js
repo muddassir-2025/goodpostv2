@@ -7,6 +7,7 @@ import { pool } from "./db.js";
 import { attachUser } from "./auth.js";
 import { bumpMetric, captureError } from "./monitoring.js";
 import { moderationState } from "./moderation.js";
+import { storageHealth } from "./storage.js";
 import postsRouter from "./routes/posts.js";
 import commentsRouter from "./routes/comments.js";
 import likesRouter from "./routes/likes.js";
@@ -73,11 +74,19 @@ export function createApp() {
   // Health check for Render.
   app.get("/health", async (_req, res) => {
     const moderation = moderationState();
+    const storage = storageHealth();
+    const body = {
+      ok: true,
+      db: "up",
+      moderation: { enabled: moderation.enabled, ready: moderation.ready },
+      // Boolean only — this endpoint is public, so no config detail leaks here.
+      storage: storage.ok,
+    };
     try {
       await pool.query("SELECT 1");
-      res.json({ ok: true, db: "up", moderation: { enabled: moderation.enabled, ready: moderation.ready } });
+      res.json(body);
     } catch {
-      res.status(503).json({ ok: false, db: "down", moderation: { enabled: moderation.enabled, ready: moderation.ready } });
+      res.status(503).json({ ...body, ok: false, db: "down" });
     }
   });
 

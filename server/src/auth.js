@@ -81,11 +81,19 @@ function extractBearer(req) {
 /** Attaches req.userId / req.profile when a valid token is present; never rejects. */
 export async function attachUser(req, _res, next) {
   try {
-    const payload = await verifyToken(extractBearer(req));
-    if (payload) {
-      req.auth = payload;
-      req.userId = payload.sub || payload.id;
-      req.profile = await ensureProfile(payload);
+    const token = extractBearer(req);
+    if (token) {
+      const payload = await verifyToken(token);
+      if (payload) {
+        req.auth = payload;
+        req.userId = payload.sub || payload.id;
+        req.profile = await ensureProfile(payload);
+      } else {
+        // A token was sent but rejected. Remember why, so requireAuth can tell the
+        // difference between "you aren't signed in" and "your token was refused"
+        // — otherwise a backend misconfiguration looks like a broken login.
+        req.authFailed = true;
+      }
     }
   } catch (error) {
     console.warn("attachUser error:", error.message);
@@ -96,7 +104,12 @@ export async function attachUser(req, _res, next) {
 /** Rejects the request when no valid token is present. */
 export function requireAuth(req, res, next) {
   if (!req.userId) {
-    return res.status(401).json({ error: "Authentication required" });
+    return res.status(401).json({
+      error: req.authFailed
+        ? "Your session token was rejected. Try signing in again."
+        : "Authentication required",
+      reason: req.authFailed ? "invalid_token" : "missing_token",
+    });
   }
   next();
 }
