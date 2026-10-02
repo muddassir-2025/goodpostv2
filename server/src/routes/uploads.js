@@ -1,12 +1,13 @@
 import { Router } from "express";
 import multer from "multer";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
-import { uploadBuffer, deleteObject, publicUrl } from "../storage.js";
+import { uploadBuffer, deleteObject, publicUrl, thumbKey } from "../storage.js";
 import { requireAuth } from "../auth.js";
 import { mimeMatches } from "../mime.js";
 import { moderateImage } from "../moderation.js";
 import { bumpMetric } from "../monitoring.js";
 import { storageHealth } from "../storage.js";
+import { createThumbnail } from "../thumbnail.js";
 
 const router = Router();
 
@@ -94,8 +95,33 @@ async function storeAndRespond(req, res, prefix) {
     prefix,
   });
   bumpMetric("uploads");
+
+  // Images also get a resized WebP companion so feeds never download the full-size
+  // original. A thumbnail failure must not fail the upload — the client falls back to
+  // the original via onError, so on failure we simply report no thumb.
+  let thumbnailKey = "";
+  if (prefix === "images") {
+    const thumb = await createThumbnail(req.file.buffer);
+    if (thumb) {
+      try {
+        thumbnailKey = await uploadBuffer(thumb, {
+          contentType: "image/webp",
+          key: thumbKey(key),
+        });
+      } catch (error) {
+        console.error("thumbnail upload error:", error.message);
+      }
+    }
+  }
+
   // Appwrite's storage.createFile returned a file object with $id — keep that shape.
-  return res.status(201).json({ $id: key, key, url: publicUrl(key) });
+  return res.status(201).json({
+    $id: key,
+    key,
+    url: publicUrl(key),
+    thumbKey: thumbnailKey || null,
+    thumbUrl: thumbnailKey ? publicUrl(thumbnailKey) : null,
+  });
 }
 
 router.post("/image", requireAuth, uploadLimiter, imageUpload.single("file"), async (req, res) => {

@@ -13,12 +13,29 @@ export function normalizeText(value, fallback = "") {
   return fallback;
 }
 
-export function getFileUrl(fileId) {
+/**
+ * Derive the companion thumbnail key for an image key:
+ * `images/x.jpg` -> `images/x.thumb.webp`. Must stay in sync with `thumbKey()`
+ * in the server's storage.js, which writes the object at this exact key.
+ */
+export function thumbFileId(fileId) {
   if (!fileId) return "";
+  const match = /^(.*)\.[a-zA-Z0-9]+$/.exec(fileId);
+  return `${match ? match[1] : fileId}.thumb.webp`;
+}
+
+/**
+ * Public URL for a stored object key. Pass `{ thumb: true }` for the resized feed
+ * image. Older objects have no thumbnail, so callers should fall back to the full
+ * image with an onError handler.
+ */
+export function getFileUrl(fileId, { thumb = false } = {}) {
+  if (!fileId) return "";
+  const key = thumb ? thumbFileId(fileId) : fileId;
   // Already-resolved absolute URLs are passed through untouched.
-  if (/^https?:\/\//.test(fileId)) return fileId;
+  if (/^https?:\/\//.test(key)) return key;
   if (!STORAGE_BASE) return "";
-  return `${STORAGE_BASE}/${fileId}`;
+  return `${STORAGE_BASE}/${key}`;
 }
 
 // Surfaces a broken VITE_STORAGE_PUBLIC_URL early: without the /<bucket> suffix every

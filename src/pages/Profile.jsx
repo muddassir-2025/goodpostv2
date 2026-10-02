@@ -160,14 +160,18 @@ export default function Profile() {
         queries.push(Query.equal("isPublished", true));
       }
 
-      const [feedPosts, favRes] = await Promise.all([
+      // Only the count is needed here; fetchFeedPosts already loads this user's favorites
+      // for the visible posts, so pulling the whole list again was a duplicate request.
+      const [feedPosts, savedCount] = await Promise.all([
         fetchFeedPosts(currentUser, queries),
-        isInitial ? favoriteService.getUSerAllFavorites(currentUser.$id) : Promise.resolve(null),
+        isInitial && isOwnProfile
+          ? favoriteService.getFavoriteCount(currentUser.$id)
+          : Promise.resolve(0),
       ]);
 
       if (isInitial) {
         setPosts(feedPosts);
-        setSavedCount(isOwnProfile ? (favRes?.documents?.length || 0) : 0);
+        setSavedCount(savedCount);
       } else {
         setPosts(prev => [...prev, ...feedPosts]);
       }
@@ -538,7 +542,8 @@ export default function Profile() {
         ) : visiblePosts.length ? (
           <div className="grid grid-cols-3 gap-1 sm:gap-1.5 p-1.5 animate-in fade-in duration-300">
             {visiblePosts.map((post) => {
-              const imageSrc = getFileUrl(post.featuredImg, { width: 400 }); // Removed webp for compatibility
+              const imageSrc = getFileUrl(post.featuredImg);
+              const thumbSrc = post.featuredImg ? getFileUrl(post.featuredImg, { thumb: true }) : "";
               const [g1, g2] = getPostGradient(post.$id);
 
               return (
@@ -550,8 +555,11 @@ export default function Profile() {
                   {imageSrc ? (
                     <>
                       <img
-                        src={imageSrc}
+                        src={thumbSrc || imageSrc}
                         alt={post.title}
+                        onError={(e) => {
+                          if (e.currentTarget.src !== imageSrc) e.currentTarget.src = imageSrc;
+                        }}
                         className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
                       <div

@@ -41,8 +41,8 @@ export default function Login() {
       if (session) {
         const user = await authService.getCurrentUser();
         if (user) {
-          const isAdmin = await authService.checkIsAdmin();
-          dispatch(login({ userData: user, isAdmin }));
+          // isAdmin is already on the profile response.
+          dispatch(login({ userData: user, isAdmin: Boolean(user.isAdmin) }));
         }
       }
     } catch {

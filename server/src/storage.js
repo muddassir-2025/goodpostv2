@@ -70,17 +70,28 @@ export function publicUrl(key) {
   return `${base.replace(/\/+$/, "")}/${key}`;
 }
 
-export async function uploadBuffer(buffer, { contentType, extension, prefix = "uploads" }) {
-  const key = `${prefix}/${randomUUID()}${extension ? `.${extension}` : ""}`;
+/**
+ * Derive the companion thumbnail key for an image key:
+ * `images/x.jpg` -> `images/x.thumb.webp`. Kept in sync with `getFileUrl(..., { thumb: true })`
+ * on the client, so a change here must change there too.
+ */
+export function thumbKey(key) {
+  if (!key) return "";
+  const match = /^(.*)\.[a-zA-Z0-9]+$/.exec(key);
+  return `${match ? match[1] : key}.thumb.webp`;
+}
+
+export async function uploadBuffer(buffer, { contentType, extension, prefix = "uploads", key } = {}) {
+  const objectKey = key || `${prefix}/${randomUUID()}${extension ? `.${extension}` : ""}`;
   await getClient().send(
     new PutObjectCommand({
       Bucket: env.storage.bucket,
-      Key: key,
+      Key: objectKey,
       Body: buffer,
       ContentType: contentType || "application/octet-stream",
     }),
   );
-  return key;
+  return objectKey;
 }
 
 export async function deleteObject(key) {

@@ -42,8 +42,8 @@ function App() {
         // Neon Auth restores the session cookie automatically after OAuth redirects.
         const user = await authService.getCurrentUser();
         if (user) {
-          const isAdmin = await authService.checkIsAdmin();
-          dispatch(login({ userData: user, isAdmin }));
+          // `user` already carries isAdmin, so pass it rather than re-fetching the profile.
+          dispatch(login({ userData: user, isAdmin: Boolean(user.isAdmin) }));
         } else {
           dispatch(logout());
         }

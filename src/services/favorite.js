@@ -18,6 +18,17 @@ class FavoriteService {
     return api.get(withQueries("/api/favorites", [Query.equal("userId", userId)]));
   }
 
+  /**
+   * Just the count. The profile page only needs a number, and this avoids pulling every
+   * favorite document — which the feed enrichment was already fetching separately.
+   */
+  async getFavoriteCount(userId) {
+    const response = await api.get(
+      withQueries("/api/favorites", [Query.equal("userId", userId), Query.limit(1)]),
+    );
+    return response?.total || 0;
+  }
+
   // Batch helper used when enriching a feed: postId -> favorite document.
   async getFavoriteMap(userId, postIds) {
     if (!postIds?.length) return {};

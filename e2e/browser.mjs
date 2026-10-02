@@ -24,7 +24,8 @@ mkdirSync(OUT, { recursive: true });
 const BASE = (process.argv.find((a) => a.startsWith("--base="))?.slice(7) || "http://localhost:5173").replace(/\/+$/, "");
 const HEADED = process.argv.includes("--headed");
 const AUTH = "https://ep-divine-term-b5s7sd84.neonauth.c-7.us-east-2.aws.neon.tech/neondb/auth";
-const API = "https://goodpost-api.onrender.com";
+// Override to point direct API calls at a local backend (e.g. GP_E2E_API=http://localhost:8080).
+const API = process.env.GP_E2E_API || "https://goodpost-api.onrender.com";
 
 const PASSWORD = process.env.GP_E2E_PASSWORD || "";
 const USER_A = { email: process.env.GP_E2E_EMAIL_A || "", password: PASSWORD, name: "Smoke Test" };
@@ -67,7 +68,19 @@ function watch(page, bag) {
     }
   });
   page.on("websocket", (ws) => {
-    if (ws.url().includes("/ws")) bag.ws.push(ws.url());
+    if (!ws.url().includes("/ws")) return;
+    bag.ws.push(ws.url());
+    // Record realtime event types the server pushes to this page. Asserting on the raw
+    // frame is robust: the notifications list is capped at 15 rows, so a new event can
+    // prune an old one and leave any DOM count or text unchanged.
+    ws.on("framereceived", (frame) => {
+      try {
+        const data = JSON.parse(String(frame.payload));
+        if (data?.type) bag.frames.push(data.type);
+      } catch {
+        // ignore malformed frames
+      }
+    });
   });
   // Capture a real bearer token so tests can call the API directly and prove the server
   // enforces authorization rather than relying on the UI to hide things.
@@ -76,7 +89,14 @@ function watch(page, bag) {
     if (auth && !bag.token) bag.token = auth.replace(/^Bearer\s+/i, "");
   });
 }
-const bag = () => ({ pageErrors: [], bad: [], notFound: [], ws: [], token: null });
+const bag = () => ({ pageErrors: [], bad: [], notFound: [], ws: [], frames: [], token: null });
+const countFrames = (bag, type) => bag.frames.filter((t) => t === type).length;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Wait (Node-side) for the page's realtime socket to open before triggering a live event. */
+async function waitForSocket(bag, ms = 15000) {
+  const deadline = Date.now() + ms;
+  while (!bag.ws.length && Date.now() < deadline) await sleep(400);
+}
 
 // The in-browser NSFW check runs TF.js in a worker and needs WebGL. Headless Chrome has
 // no GPU, so enable SwiftShader software rendering or the check never resolves.
@@ -100,7 +120,10 @@ async function login(page, { email, password }) {
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
-  await page.waitForTimeout(7000);
+  // Wait for the SPA to leave /login instead of a fixed delay, which was sometimes too
+  // short and reported a false "login failed" while the session was still settling.
+  await page.waitForURL((url) => !url.pathname.includes("/login"), { timeout: 25000 }).catch(() => {});
+  await page.waitForTimeout(1500);
   return !page.url().includes("/login");
 }
 
@@ -183,6 +206,7 @@ try {
   watch(A, bagA);
 
   check("user A logs in", await login(A, USER_A), A.url());
+  const aId = await userIdOf(ctxA);
   await A.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
   await A.waitForTimeout(4000);
   check("session persists across navigation", !A.url().includes("/login"), A.url());
@@ -228,7 +252,12 @@ try {
   /* ------------------------------------------------------- image renders */
   section("uploaded image renders in the feed");
   await A.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-  await A.waitForTimeout(6000);
+  // Wait for at least one storage image to finish loading rather than a fixed delay:
+  // a 6s wait was sometimes too short and reported zero loaded images.
+  await A.waitForFunction(
+    () => Array.from(document.images).some((i) => i.complete && i.currentSrc.includes("storage")),
+    { timeout: 15000 },
+  ).catch(() => {});
 
   // Only assert on images that finished loading (complete) so lazy/offscreen images
   // are not misreported as broken.
@@ -285,6 +314,7 @@ try {
     // --- A follows B; B must see it live. ---
     await B.goto(`${BASE}/notifications`, { waitUntil: "domcontentloaded" });
     await B.waitForTimeout(5000);
+    await waitForSocket(bagB);
 
     await A.goto(`${BASE}/profile/${bId}`, { waitUntil: "domcontentloaded" });
     await A.waitForTimeout(6000);
@@ -299,7 +329,7 @@ try {
     const canFollow = await followBtn.isVisible().catch(() => false);
     check("follow control available on a profile", canFollow, `initial label=${label0}`);
 
-    const bFollowBefore = await B.getByText(/started following you/i).count();
+    const bFramesBefore = countFrames(bagB, "notification:create");
     if (canFollow) {
       await followBtn.click();
       await A.waitForTimeout(4000);
@@ -311,22 +341,41 @@ try {
     }
 
     await B.waitForTimeout(8000);
-    const bFollowAfter = await B.getByText(/started following you/i).count();
-    check("B receives the follow notification without reloading", bFollowAfter > bFollowBefore, `${bFollowBefore} -> ${bFollowAfter}`);
+    const bFramesAfter = countFrames(bagB, "notification:create");
+    check(
+      "B receives the follow notification without reloading",
+      bFramesAfter > bFramesBefore,
+      `notification:create frames ${bFramesBefore} -> ${bFramesAfter}`,
+    );
 
     // --- B likes A's post; A must see it live. ---
     await A.goto(`${BASE}/notifications`, { waitUntil: "domcontentloaded" });
     await A.waitForTimeout(5000);
-    const aLikeBefore = await A.getByText(/liked your post/i).count();
+    await waitForSocket(bagA);
+    const aFramesBefore = countFrames(bagA, "notification:create");
 
-    await B.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
-    await B.waitForTimeout(6000);
-    const bLiked = await clickIn(B, "article:first-of-type div.mt-4 button:first-child");
-    check("B can like a post", bLiked);
+    // Like one of A's own posts (not "whatever is first in B's feed") so A is
+    // guaranteed to receive the notification regardless of feed ranking.
+    const bTok = (await (await ctxB.request.get(`${AUTH}/token`, { headers: { Origin: BASE } })).json())?.token;
+    const feed = await (
+      await ctxB.request.get(`${API}/api/posts`, { headers: { Authorization: `Bearer ${bTok}` } })
+    ).json();
+    const aPost = (feed.documents || []).find((p) => p.authorID === aId);
+    const likeRes = aPost
+      ? await ctxB.request.post(`${API}/api/likes`, {
+          headers: { Authorization: `Bearer ${bTok}`, "Content-Type": "application/json" },
+          data: { postId: aPost.$id, userName: "E2E B" },
+        })
+      : null;
+    check("B can like a post", !!likeRes && likeRes.ok(), aPost ? aPost.$id : "no post by A");
 
     await A.waitForTimeout(8000);
-    const aLikeAfter = await A.getByText(/liked your post/i).count();
-    check("A receives the like notification without reloading", aLikeAfter > aLikeBefore, `${aLikeBefore} -> ${aLikeAfter}`);
+    const aFramesAfter = countFrames(bagA, "notification:create");
+    check(
+      "A receives the like notification without reloading",
+      aFramesAfter > aFramesBefore,
+      `notification:create frames ${aFramesBefore} -> ${aFramesAfter}`,
+    );
 
     check("realtime socket connected (A)", bagA.ws.length > 0, `ws=${bagA.ws.length}`);
     check("realtime socket connected (B)", bagB.ws.length > 0, `ws=${bagB.ws.length}`);

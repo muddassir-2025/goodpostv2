@@ -11,6 +11,7 @@
     "migrate": "node scripts/migrate.js",
     "seed:music": "node scripts/seedMusic.js",
     "set-admin": "node scripts/setAdmin.js",
+    "backfill:thumbs": "node scripts/backfillThumbnails.js",
     "test": "node --test test/*.test.js",
     "check": "node --check src/index.js"
   },

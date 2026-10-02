@@ -109,6 +109,34 @@ class MessageService {
     );
     return () => unsubscribers.forEach((unsub) => unsub());
   }
+
+  /**
+   * Conversations with an unread inbound message. The navbar and the notifications page
+   * both need this, and each was fetching conversations plus a per-conversation message
+   * lookup. Doing it once here halves the requests on every page that shows a badge.
+   */
+  async getUnreadInbox(userId) {
+    const conversations = (await this.getConversations(userId))?.documents || [];
+    const unread = conversations.filter((c) => c.unreadCount > 0 && c.lastMessage);
+
+    const latest = await Promise.all(
+      unread.map(async (conversation) => {
+        const messages = (await this.getMessages(conversation.$id, 1))?.documents || [];
+        const last = messages[0];
+        if (!last || last.senderId === userId) return null;
+        const otherId = (conversation.members || []).find((id) => id !== userId) || null;
+        return {
+          conversationId: conversation.$id,
+          senderId: last.senderId,
+          otherId,
+          text: conversation.lastMessage,
+          at: conversation.lastMessageAt,
+        };
+      }),
+    );
+
+    return latest.filter(Boolean);
+  }
 }
 
 const messageService = new MessageService();

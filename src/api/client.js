@@ -9,7 +9,34 @@ export function withQueries(path, queries = []) {
   return `${path}${separator}queries=${encodeURIComponent(JSON.stringify(queries))}`;
 }
 
+/**
+ * In-flight GET dedupe. Several components mount at once on a route change and ask for the
+ * same resource (the current profile, the following list); without this each one opens its
+ * own request. Only the promise is shared, never the response body, so callers cannot
+ * mutate each other's data. Entries are dropped the moment the request settles.
+ */
+const inflight = new Map();
+
+function deduped(key, run) {
+  const existing = inflight.get(key);
+  if (existing) return existing;
+
+  const promise = run().finally(() => {
+    inflight.delete(key);
+  });
+  inflight.set(key, promise);
+  return promise;
+}
+
 export async function request(path, { method = "GET", body, isForm = false, auth = true } = {}) {
+  // GETs are safe to coalesce; anything with a body is not.
+  if (method === "GET" && body === undefined) {
+    return deduped(`GET ${path} auth=${auth}`, () => perform(path, { method, body, isForm, auth }));
+  }
+  return perform(path, { method, body, isForm, auth });
+}
+
+async function perform(path, { method = "GET", body, isForm = false, auth = true } = {}) {
   const headers = {};
   if (auth) {
     const token = await getToken();

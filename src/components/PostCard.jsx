@@ -12,7 +12,6 @@ import {
   CommentIcon,
   DotsIcon,
   EditIcon,
-  PlayIcon,
   ShareIcon,
   ShieldIcon,
   TrashIcon,
@@ -41,8 +40,10 @@ const PostCard = memo(({
   const isAdmin = useSelector((state) => state.auth.isAdmin);
   const isOwner = (currentUserId && currentUserId === post.authorID) || isAdmin;
   
-  // Optimize image for feed: WebP format, width 800px for quality/size balance
-  const imageSrc = getFileUrl(post.featuredImg, { width: 800 });
+  // Feed images use the resized WebP companion; older objects without one fall back
+  // to the full-size original via the onError handler on the <img>.
+  const imageSrc = getFileUrl(post.featuredImg);
+  const thumbSrc = post.featuredImg ? getFileUrl(post.featuredImg, { thumb: true }) : "";
   const audioSrc = getFileUrl(post.audioId);
   const captionPreview =
     post.content?.length > 150 ? `${post.content.slice(0, 150).trim()}...` : post.content;
@@ -196,10 +197,17 @@ const PostCard = memo(({
         >
           {imageSrc ? (
             <img
-              src={imageSrc}
+              src={thumbSrc || imageSrc}
               alt={post.title}
               loading={isPriority ? "eager" : "lazy"}
               fetchPriority={isPriority ? "high" : "auto"}
+              onError={(e) => {
+                // Thumbnail missing (e.g. uploaded before thumbnails existed) — retry once
+                // with the original. Guard prevents an infinite error loop.
+                if (imageSrc && e.currentTarget.src !== imageSrc) {
+                  e.currentTarget.src = imageSrc;
+                }
+              }}
               className="w-full max-h-[450px] object-contain bg-zinc-900"
             />
           ) : (

@@ -8,7 +8,7 @@ import { SearchIcon, UserIcon } from "../components/ui/Icons";
 import { useDebounce } from "../hooks/useDebounce";
 import messageService from "../services/message";
 import followService from "../services/follow";
-import postService from "../services/post";
+import userService from "../services/user";
 import { formatRelativeTime, getHandle } from "../lib/ui";
 
 export default function Messages() {
@@ -24,38 +24,36 @@ export default function Messages() {
   const [followingIds, setFollowingIds] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Load users directory (since we don't have a direct users API)
+  // 1. Load the people you can message.
   useEffect(() => {
     let active = true;
     async function loadData() {
       if (!user) return;
       setLoading(true);
       try {
-        const [postsResponse, followingResponse, convsResponse] = await Promise.all([
-          postService.getPosts(), // Used to extract unique users
+        // Use the users endpoint rather than downloading every post and de-duplicating
+        // authors client-side — that pulled the whole feed just to build a name list.
+        const [usersResponse, followingResponse, convsResponse] = await Promise.all([
+          userService.searchUsers(""),
           followService.getFollowing(user.$id),
           messageService.getConversations(user.$id)
         ]);
 
         if (!active) return;
 
-        // Extract unique users
-        const uniqueUsersMap = new Map();
-        for (const post of postsResponse?.documents || []) {
-          if (!uniqueUsersMap.has(post.authorID) && post.authorID !== user.$id) {
-            uniqueUsersMap.set(post.authorID, {
-              id: post.authorID,
-              name: post.authorName,
-            });
-          }
-        }
-        setUsersDirectory(Array.from(uniqueUsersMap.values()));
+        const directory = (usersResponse?.documents || [])
+          .filter((profile) => profile.$id !== user.$id)
+          .map((profile) => ({ id: profile.$id, name: profile.name }));
+
+        setUsersDirectory(directory);
         setFollowingIds(followingResponse || []);
 
         // Enhance conversations with other user's info
+        const directoryById = new Map(directory.map((entry) => [entry.id, entry]));
+
         const enhancedConvsPromises = (convsResponse?.documents || []).map(async conv => {
           const otherUserId = conv.members.find(id => id !== user.$id);
-          const otherUser = uniqueUsersMap.get(otherUserId) || { id: otherUserId, name: "Unknown User" };
+          const otherUser = directoryById.get(otherUserId) || { id: otherUserId, name: "Unknown User" };
           
           let actualUnread = conv.unreadCount;
           if (actualUnread > 0) {

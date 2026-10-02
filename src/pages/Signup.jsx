@@ -57,8 +57,7 @@ export default function Signup() {
       const user = await authService.getCurrentUser();
 
       if (user) {
-        const isAdmin = await authService.checkIsAdmin();
-        dispatch(login({ userData: user, isAdmin }));
+        dispatch(login({ userData: user, isAdmin: Boolean(user.isAdmin) }));
       }
     } catch (err) {
       setError(err?.message || "Signup failed. Try a different email or stronger password.");
@@ -78,8 +77,7 @@ export default function Signup() {
       if (await authService.hasSession()) {
         const user = await authService.getCurrentUser();
         if (user) {
-          const isAdmin = await authService.checkIsAdmin();
-          dispatch(login({ userData: user, isAdmin }));
+          dispatch(login({ userData: user, isAdmin: Boolean(user.isAdmin) }));
           return;
         }
       }

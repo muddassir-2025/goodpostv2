@@ -27,42 +27,30 @@ export default function Notifications() {
 
     async function loadAllNotifications() {
       try {
-        const [notifRes, convRes] = await Promise.all([
+        // getUnreadInbox resolves conversations and their latest message in one place,
+        // instead of this page repeating what the navbar already fetched.
+        const [notifRes, unread] = await Promise.all([
           notificationService.getUserNotifications(user.$id),
-          messageService.getConversations(user.$id)
+          messageService.getUnreadInbox(user.$id),
         ]);
 
         if (!active) return;
 
         const regularNotifs = notifRes?.documents || [];
-        
-        // Transform unread conversations into notification objects (Filter out own messages)
-        const chatNotifsPromises = (convRes?.documents || [])
-          .filter(c => c.unreadCount > 0 && c.lastMessage)
-          .map(async (c) => {
-            // Fetch the last message to see who sent it
-            const msgs = await messageService.getMessages(c.$id, 1);
-            const lastMsg = msgs.documents[msgs.documents.length - 1];
-            
-            if (!lastMsg || lastMsg.senderId === user.$id) return null;
 
-            const otherId = c.members.find(id => id !== user.$id) || "unknown";
-            return {
-              $id: `chat_${c.$id}`,
-              conversationId: c.$id,
-              type: "chat",
-              actorId: otherId,
-              actorName: "Someone", // Optimized: removed heavy userMap fetch
-              content: c.lastMessage,
-              $createdAt: c.lastMessageAt,
-              isRead: false
-            };
-          });
+        // Present unread conversations as notifications so one list covers both.
+        const chatNotifs = unread.map((item) => ({
+          $id: `chat_${item.conversationId}`,
+          conversationId: item.conversationId,
+          type: "chat",
+          actorId: item.otherId || "unknown",
+          actorName: "Someone",
+          content: item.text,
+          $createdAt: item.at,
+          isRead: false,
+        }));
 
-        const chatNotifsResolved = await Promise.all(chatNotifsPromises);
-        const chatNotifs = chatNotifsResolved.filter(n => n !== null);
-
-        const merged = [...regularNotifs, ...chatNotifs].sort((a, b) => 
+        const merged = [...regularNotifs, ...chatNotifs].sort((a, b) =>
           new Date(b.$createdAt) - new Date(a.$createdAt)
         );
 
@@ -85,8 +73,11 @@ export default function Notifications() {
 
     loadAllNotifications();
 
-    // Subscribe to realtime notifications
-    const unsubNotifs = notificationService.subscribeToNotifications(user.$id, () => {
+    // Subscribe to realtime notifications. Marking everything read echoes back as
+    // { allRead: true }; the local state above already reflected that, so reloading on it
+    // just re-fetched the whole list a second time.
+    const unsubNotifs = notificationService.subscribeToNotifications(user.$id, (payload) => {
+      if (payload?.allRead || payload?.all) return;
       loadAllNotifications();
     });
 

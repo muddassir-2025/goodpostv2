@@ -9,7 +9,6 @@ import {
   BellIcon,
   ShieldIcon,
   UserIcon,
-  DotsIcon,
 } from "./ui/Icons";
 import { getHandle } from "../lib/ui";
 import notificationService from "../services/notification";
@@ -114,30 +113,17 @@ export default function Navbar() {
   const isAdmin = useSelector((state) => state.auth.isAdmin);
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return undefined;
 
     async function checkNotifications() {
-      const [notifCount, convRes] = await Promise.all([
+      const [notifCount, unreadChats] = await Promise.all([
         notificationService.countUnread(user.$id),
-        messageService.getConversations(user.$id),
+        messageService.getUnreadInbox(user.$id),
       ]);
 
-      const convDocs = convRes?.documents || [];
-      const unreadChatPromises = convDocs
-        .filter((c) => c.unreadCount > 0 && c.lastMessage)
-        .map(async (c) => {
-          const msgs = await messageService.getMessages(c.$id, 1);
-          const lastMsg = msgs.documents[0];
-          return lastMsg && lastMsg.senderId !== user.$id;
-        });
-
-      const results = await Promise.all(unreadChatPromises);
-      const unreadChats = results.filter(Boolean).length;
-
-      setUnreadCount(notifCount + unreadChats);
+      setUnreadCount(notifCount + unreadChats.length);
     }
 
     checkNotifications();
@@ -152,10 +138,7 @@ export default function Navbar() {
     };
   }, [user]);
 
-  const closeMenus = () => {
-    setProfileOpen(false);
-    setMoreOpen(false);
-  };
+  const closeMenus = () => setProfileOpen(false);
 
   return (
     <header className="fixed inset-x-0 top-0 z-40 border-b border-white/10 bg-black/72 backdrop-blur-xl">
@@ -183,56 +166,22 @@ export default function Navbar() {
         {user ? (
           <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
             {/*
-              Admin is an operator role, not everyday navigation, so it lives in the
-              profile menu instead of consuming a permanent slot — which is what pushed
-              the Messages icon off-screen on phones.
+              Four actions total. Admin is an operator role, not everyday navigation, so it
+              lives in the profile menu instead of consuming a permanent slot — five actions
+              is what pushed the Messages icon off-screen on 320-390px phones. Favorites
+              moves into the profile menu on small screens rather than a second popover.
             */}
-            <ActionLink
-              to="/create"
-              label="Create post"
-              icon={PlusSquareIcon}
-              className="hidden xs:flex"
-            />
+            <ActionLink to="/create" label="Create post" icon={PlusSquareIcon} />
             <ActionLink to="/favorites" label="Favorites" icon={HeartIcon} className="hidden xs:flex" />
             <ActionLink to="/notifications" label="Notifications" icon={BellIcon} badge={unreadCount} />
             <ActionLink to="/messages" label="Messages" icon={MessageIcon} />
-
-            {/* Overflow for the secondary destinations on small screens. */}
-            <div className="relative xs:hidden">
-              <button
-                type="button"
-                aria-label="More options"
-                aria-expanded={moreOpen}
-                onClick={() => {
-                  setMoreOpen((open) => !open);
-                  setProfileOpen(false);
-                }}
-                className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300 transition hover:border-white/20 hover:text-white"
-              >
-                <DotsIcon className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-black" />
-                )}
-              </button>
-
-              <Menu open={moreOpen} onClose={closeMenus}>
-                <MenuItem to="/create" icon={PlusSquareIcon} label="Create post" onSelect={closeMenus} />
-                <MenuItem to="/favorites" icon={HeartIcon} label="Favorites" onSelect={closeMenus} />
-                {isAdmin ? (
-                  <MenuItem to="/admin" icon={ShieldIcon} label="Admin" onSelect={closeMenus} />
-                ) : null}
-              </Menu>
-            </div>
 
             <div className="relative">
               <button
                 type="button"
                 aria-label="Account menu"
                 aria-expanded={profileOpen}
-                onClick={() => {
-                  setProfileOpen((open) => !open);
-                  setMoreOpen(false);
-                }}
+                onClick={() => setProfileOpen((open) => !open)}
                 className="flex shrink-0 items-center gap-3 rounded-full border border-white/10 bg-white/5 px-2 py-1.5 text-sm text-zinc-300 transition hover:border-white/20 hover:text-white md:pr-3"
               >
                 <Avatar name={user.name} userId={user.$id} size="sm" />

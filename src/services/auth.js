@@ -2,11 +2,15 @@ import { authClient, getToken, clearTokenCache } from "../auth";
 import { api } from "../api/client";
 
 class AuthService {
-  // Neon Auth (Managed Better Auth) has no "teams" concept; admin is a profile flag.
-  async checkIsAdmin() {
+  /**
+   * Neon Auth has no roles; admin is a profile flag that `/api/users/me` already returns.
+   * Prefer the user object you already hold and pass it in — calling this with no argument
+   * re-fetches the profile, which was doubling the request count on every route.
+   */
+  async checkIsAdmin(user) {
     try {
-      const user = await this.getCurrentUser();
-      return Boolean(user?.isAdmin);
+      const resolved = user || (await this.getCurrentUser());
+      return Boolean(resolved?.isAdmin);
     } catch {
       return false;
     }

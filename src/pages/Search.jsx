@@ -305,9 +305,13 @@ export default function Search() {
             }`}
           >
             <img
-              src={getFileUrl(post.featuredImg)}
+              src={getFileUrl(post.featuredImg, { thumb: true })}
               className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
               alt=""
+              onError={(e) => {
+                const original = getFileUrl(post.featuredImg);
+                if (e.currentTarget.src !== original) e.currentTarget.src = original;
+              }}
             />
           </div>
         )}
@@ -476,9 +480,13 @@ export default function Search() {
                             {results[0].featuredImg && (
                               <div className="flex-shrink-0 h-20 w-20 rounded-xl overflow-hidden border border-white/[0.08]">
                                 <img
-                                  src={getFileUrl(results[0].featuredImg)}
+                                  src={getFileUrl(results[0].featuredImg, { thumb: true })}
                                   className="h-full w-full object-cover"
                                   alt=""
+                                  onError={(e) => {
+                                    const original = getFileUrl(results[0].featuredImg);
+                                    if (e.currentTarget.src !== original) e.currentTarget.src = original;
+                                  }}
                                 />
                               </div>
                             )}

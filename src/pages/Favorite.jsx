@@ -182,6 +182,7 @@ export default function Favorites() {
           <div className="grid grid-cols-3 gap-1 sm:gap-1.5 animate-in fade-in duration-300">
             {filteredPosts.map((post) => {
               const imageSrc = getFileUrl(post.featuredImg);
+              const thumbSrc = post.featuredImg ? getFileUrl(post.featuredImg, { thumb: true }) : "";
               const gradient = getPostGradient(post.$id);
 
               return (
@@ -193,8 +194,11 @@ export default function Favorites() {
                   {/* Image or gradient fallback */}
                   {imageSrc ? (
                     <img
-                      src={imageSrc}
+                      src={thumbSrc || imageSrc}
                       alt={post.title}
+                      onError={(e) => {
+                        if (e.currentTarget.src !== imageSrc) e.currentTarget.src = imageSrc;
+                      }}
                       className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                   ) : (
